@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { HashingService } from './hashing/hashing.service';
 import { UsersService } from 'src/users/users.service';
@@ -19,14 +23,14 @@ export class AuthService {
       dto.email,
     );
     if (existingUserWithEmail) {
-      throw new Error('User already exists');
+      throw new ConflictException('User already exists');
     }
 
     const existingUserWithUsername = await this.usersService.findByUsername(
       dto.username,
     );
     if (existingUserWithUsername) {
-      throw new Error('Username already taken');
+      throw new ConflictException('Username already taken');
     }
 
     const hashedPassword = await this.hashingService.hash(dto.password);
@@ -46,7 +50,7 @@ export class AuthService {
   async login(dto: LoginDto): Promise<{ accessToken: string }> {
     const user = await this.usersService.findByEmail(dto.email);
     if (!user) {
-      throw new Error('Invalid credentials');
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     const isValid = await this.hashingService.compare(
@@ -54,7 +58,7 @@ export class AuthService {
       user.password,
     );
     if (!isValid) {
-      throw new Error('Invalid credentials');
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     const accessToken = await this.generateToken(
