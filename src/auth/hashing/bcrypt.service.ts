@@ -5,7 +5,7 @@ import { Injectable } from '@nestjs/common';
 @Injectable()
 export class BcryptService extends HashingService {
   async hash(data: string): Promise<string> {
-    const saltRounds = 10;
+    const saltRounds = 12;
     return bcrypt.hash(data, saltRounds);
   }
 

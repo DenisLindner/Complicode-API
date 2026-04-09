@@ -5,18 +5,22 @@ import { HashingService } from './hashing/hashing.service';
 import { BcryptService } from './hashing/bcrypt.service';
 import { JwtModule } from '@nestjs/jwt';
 import { UsersModule } from 'src/users/users.module';
+import { ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
     UsersModule,
-    JwtModule.register({
-      global: true,
-      secret: process.env.JWT_SECRET,
-      signOptions: {
-        audience: process.env.JWT_AUDIENCE,
-        issuer: process.env.JWT_ISSUER,
-        expiresIn: '1h',
-      },
+    JwtModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        global: true,
+        secret: configService.get<string>('JWT_SECRET'),
+        signOptions: {
+          audience: configService.get<string>('JWT_AUDIENCE'),
+          issuer: configService.get<string>('JWT_ISSUER'),
+          expiresIn: '1h',
+        },
+      }),
     }),
   ],
   providers: [
