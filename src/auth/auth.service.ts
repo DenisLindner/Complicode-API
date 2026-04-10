@@ -70,7 +70,7 @@ export class AuthService {
   }
 
   private async generateToken(id: string, email: string, role: Role) {
-    const payload = { id, email, role };
+    const payload = { sub: id, email, role };
     return this.jwtService.signAsync(payload);
   }
 }

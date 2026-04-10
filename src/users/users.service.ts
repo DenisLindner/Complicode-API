@@ -26,4 +26,11 @@ export class UsersService {
       select: { id: true, email: true, password: true, role: true },
     });
   }
+
+  async findById(id: string) {
+    return this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+  }
 }

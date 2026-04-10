@@ -1,5 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { CanActivate, Injectable, ExecutionContext } from '@nestjs/common';
+import {
+  CanActivate,
+  Injectable,
+  ExecutionContext,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { IS_PUBLIC_KEY } from '../decorators/is-public.decorator';
@@ -24,13 +29,13 @@ export class AuthTokenGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<Request>();
     const token = this.extractTokenFromHeader(request);
     if (!token) {
-      return false;
+      throw new UnauthorizedException('Not logged in');
     }
     try {
       const payload = await this.jwtService.verifyAsync(token);
       request['user'] = payload;
     } catch {
-      return false;
+      throw new UnauthorizedException('Not logged in');
     }
 
     return true;

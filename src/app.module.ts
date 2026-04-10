@@ -5,10 +5,16 @@ import { AuthModule } from './auth/auth.module';
 import { AuthTokenGuard } from './auth/guards/auth-token.guard';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ChallengesModule } from './challenges/challenges.module';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
+    UsersModule,
+    AuthModule,
+    ChallengesModule,
     ThrottlerModule.forRoot({
       throttlers: [
         {
@@ -17,18 +23,15 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
         },
       ],
     }),
-    UsersModule,
-    AuthModule,
-    ConfigModule.forRoot({ isGlobal: true }),
   ],
   controllers: [],
   providers: [
     {
-      provide: 'APP_GUARD',
+      provide: APP_GUARD,
       useClass: AuthTokenGuard,
     },
     {
-      provide: 'APP_GUARD',
+      provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
   ],
