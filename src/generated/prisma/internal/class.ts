@@ -20,7 +20,7 @@ const config: runtime.GetPrismaClientConfig = {
   "clientVersion": "7.10.0",
   "engineVersion": "0edf323efd1d98336f3f0a68684b56f689b900d3",
   "activeProvider": "postgresql",
-  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Get a free hosted Postgres database in seconds: `npx create-db`\n\ngenerator client {\n  provider     = \"prisma-client\"\n  output       = \"../src/generated/prisma\"\n  moduleFormat = \"cjs\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n}\n",
+  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\ngenerator client {\n  provider     = \"prisma-client\"\n  output       = \"../src/generated/prisma\"\n  moduleFormat = \"cjs\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n}\n\nmodel Challenge {\n  id     String  @id @unique @default(uuid(7))\n  title  String\n  body   String\n  public Boolean\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  @@map(\"challenges\")\n}\n",
   "runtimeDataModel": {
     "models": {},
     "enums": {},
@@ -32,10 +32,10 @@ const config: runtime.GetPrismaClientConfig = {
   }
 }
 
-config.runtimeDataModel = JSON.parse("{\"models\":{},\"enums\":{},\"types\":{}}")
+config.runtimeDataModel = JSON.parse("{\"models\":{\"Challenge\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"title\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"body\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"public\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"challenges\",\"schema\":null}},\"enums\":{},\"types\":{}}")
 config.parameterizationSchema = {
-  strings: JSON.parse("[]"),
-  graph: "AAAA"
+  strings: JSON.parse("[\"where\",\"Challenge.findUnique\",\"Challenge.findUniqueOrThrow\",\"orderBy\",\"cursor\",\"Challenge.findFirst\",\"Challenge.findFirstOrThrow\",\"Challenge.findMany\",\"data\",\"Challenge.createOne\",\"Challenge.createMany\",\"Challenge.createManyAndReturn\",\"Challenge.updateOne\",\"Challenge.updateMany\",\"Challenge.updateManyAndReturn\",\"create\",\"update\",\"Challenge.upsertOne\",\"Challenge.deleteOne\",\"Challenge.deleteMany\",\"having\",\"_count\",\"_min\",\"_max\",\"Challenge.groupBy\",\"Challenge.aggregate\",\"AND\",\"OR\",\"NOT\",\"id\",\"title\",\"body\",\"public\",\"createdAt\",\"updatedAt\",\"equals\",\"in\",\"notIn\",\"lt\",\"lte\",\"gt\",\"gte\",\"not\",\"contains\",\"startsWith\",\"endsWith\",\"set\"]"),
+  graph: "LgkQCRoAACUAMBsAAAQAEBwAACUAMB0BAAAAAR4BACYAIR8BACYAISAgACcAISFAACgAISJAACgAIQEAAAABACABAAAAAQAgCRoAACUAMBsAAAQAEBwAACUAMB0BACYAIR4BACYAIR8BACYAISAgACcAISFAACgAISJAACgAIQADAAAABAAgAwAABQAwBAAAAQAgAwAAAAQAIAMAAAUAMAQAAAEAIAMAAAAEACADAAAFADAEAAABACAGHQEAAAABHgEAAAABHwEAAAABICAAAAABIUAAAAABIkAAAAABAQgAAAkAIAYdAQAAAAEeAQAAAAEfAQAAAAEgIAAAAAEhQAAAAAEiQAAAAAEBCAAACwAwAQgAAAsAMAYdAQAsACEeAQAsACEfAQAsACEgIAAtACEhQAAuACEiQAAuACECAAAAAQAgCAAADgAgBh0BACwAIR4BACwAIR8BACwAISAgAC0AISFAAC4AISJAAC4AIQIAAAAEACAIAAAQACACAAAABAAgCAAAEAAgAwAAAAEAIA8AAAkAIBAAAA4AIAEAAAABACABAAAABAAgAxUAACkAIBYAACsAIBcAACoAIAkaAAAaADAbAAAXABAcAAAaADAdAQAbACEeAQAbACEfAQAbACEgIAAcACEhQAAdACEiQAAdACEDAAAABAAgAwAAFgAwFAAAFwAgAwAAAAQAIAMAAAUAMAQAAAEAIAkaAAAaADAbAAAXABAcAAAaADAdAQAbACEeAQAbACEfAQAbACEgIAAcACEhQAAdACEiQAAdACEOFQAAHwAgFgAAJAAgFwAAJAAgIwEAAAABJAEAAAAEJQEAAAAEJgEAAAABJwEAAAABKAEAAAABKQEAAAABKgEAIwAhKwEAAAABLAEAAAABLQEAAAABBRUAAB8AIBYAACIAIBcAACIAICMgAAAAASogACEAIQsVAAAfACAWAAAgACAXAAAgACAjQAAAAAEkQAAAAAQlQAAAAAQmQAAAAAEnQAAAAAEoQAAAAAEpQAAAAAEqQAAeACELFQAAHwAgFgAAIAAgFwAAIAAgI0AAAAABJEAAAAAEJUAAAAAEJkAAAAABJ0AAAAABKEAAAAABKUAAAAABKkAAHgAhCCMCAAAAASQCAAAABCUCAAAABCYCAAAAAScCAAAAASgCAAAAASkCAAAAASoCAB8AIQgjQAAAAAEkQAAAAAQlQAAAAAQmQAAAAAEnQAAAAAEoQAAAAAEpQAAAAAEqQAAgACEFFQAAHwAgFgAAIgAgFwAAIgAgIyAAAAABKiAAIQAhAiMgAAAAASogACIAIQ4VAAAfACAWAAAkACAXAAAkACAjAQAAAAEkAQAAAAQlAQAAAAQmAQAAAAEnAQAAAAEoAQAAAAEpAQAAAAEqAQAjACErAQAAAAEsAQAAAAEtAQAAAAELIwEAAAABJAEAAAAEJQEAAAAEJgEAAAABJwEAAAABKAEAAAABKQEAAAABKgEAJAAhKwEAAAABLAEAAAABLQEAAAABCRoAACUAMBsAAAQAEBwAACUAMB0BACYAIR4BACYAIR8BACYAISAgACcAISFAACgAISJAACgAIQsjAQAAAAEkAQAAAAQlAQAAAAQmAQAAAAEnAQAAAAEoAQAAAAEpAQAAAAEqAQAkACErAQAAAAEsAQAAAAEtAQAAAAECIyAAAAABKiAAIgAhCCNAAAAAASRAAAAABCVAAAAABCZAAAAAASdAAAAAAShAAAAAASlAAAAAASpAACAAIQAAAAEuAQAAAAEBLiAAAAABAS5AAAAAAQAAAAADFQAGFgAHFwAIAAAAAxUABhYABxcACAECAQIDAQUGAQYHAQcIAQkKAQoMAgsNAwwPAQ0RAg4SBBETARIUARMVAhgYBRkZCQ"
 }
 
 async function decodeBase64AsWasm(wasmBase64: string): Promise<WebAssembly.Module> {
@@ -70,8 +70,8 @@ export interface PrismaClientConstructor {
    * const prisma = new PrismaClient({
    *   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL })
    * })
-   * // Fetch zero or more Users
-   * const users = await prisma.user.findMany()
+   * // Fetch zero or more Challenges
+   * const challenges = await prisma.challenge.findMany()
    * ```
    * 
    * Read more in our [docs](https://pris.ly/d/client).
@@ -94,8 +94,8 @@ export interface PrismaClientConstructor {
  * const prisma = new PrismaClient({
  *   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL })
  * })
- * // Fetch zero or more Users
- * const users = await prisma.user.findMany()
+ * // Fetch zero or more Challenges
+ * const challenges = await prisma.challenge.findMany()
  * ```
  * 
  * Read more in our [docs](https://pris.ly/d/client).
@@ -188,7 +188,15 @@ export interface PrismaClient<
     extArgs: ExtArgs
   }>>
 
-    
+      /**
+   * `prisma.challenge`: Exposes CRUD operations for the **Challenge** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Challenges
+    * const challenges = await prisma.challenge.findMany()
+    * ```
+    */
+  get challenge(): Prisma.ChallengeDelegate<ExtArgs, { omit: OmitOpts }>;
 }
 
 export function getPrismaClientClass(): PrismaClientConstructor {

@@ -397,7 +397,7 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 
 export const ModelName = {
-
+  Challenge: 'Challenge'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -413,10 +413,85 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: never
+    modelProps: "challenge"
     txIsolationLevel: TransactionIsolationLevel
   }
-  model: {}
+  model: {
+    Challenge: {
+      payload: Prisma.$ChallengePayload<ExtArgs>
+      fields: Prisma.ChallengeFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ChallengeFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChallengePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ChallengeFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChallengePayload>
+        }
+        findFirst: {
+          args: Prisma.ChallengeFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChallengePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ChallengeFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChallengePayload>
+        }
+        findMany: {
+          args: Prisma.ChallengeFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChallengePayload>[]
+        }
+        create: {
+          args: Prisma.ChallengeCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChallengePayload>
+        }
+        createMany: {
+          args: Prisma.ChallengeCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ChallengeCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChallengePayload>[]
+        }
+        delete: {
+          args: Prisma.ChallengeDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChallengePayload>
+        }
+        update: {
+          args: Prisma.ChallengeUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChallengePayload>
+        }
+        deleteMany: {
+          args: Prisma.ChallengeDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ChallengeUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ChallengeUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChallengePayload>[]
+        }
+        upsert: {
+          args: Prisma.ChallengeUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChallengePayload>
+        }
+        aggregate: {
+          args: Prisma.ChallengeAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateChallenge>
+        }
+        groupBy: {
+          args: Prisma.ChallengeGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ChallengeGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ChallengeCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ChallengeCountAggregateOutputType> | number
+        }
+      }
+    }
+  }
 } & {
   other: {
     payload: any
@@ -455,7 +530,87 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
 
 
+export const ChallengeScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  body: 'body',
+  public: 'public',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
 
+export type ChallengeScalarFieldEnum = (typeof ChallengeScalarFieldEnum)[keyof typeof ChallengeScalarFieldEnum]
+
+
+export const SortOrder = {
+  asc: 'asc',
+  desc: 'desc'
+} as const
+
+export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
+
+
+export const QueryMode = {
+  default: 'default',
+  insensitive: 'insensitive'
+} as const
+
+export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
+
+
+
+/**
+ * Field references
+ */
+
+
+/**
+ * Reference to a field of type 'String'
+ */
+export type StringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'String'>
+    
+
+
+/**
+ * Reference to a field of type 'String[]'
+ */
+export type ListStringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'String[]'>
+    
+
+
+/**
+ * Reference to a field of type 'Boolean'
+ */
+export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
+    
+
+
+/**
+ * Reference to a field of type 'DateTime'
+ */
+export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
+    
+
+
+/**
+ * Reference to a field of type 'DateTime[]'
+ */
+export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
+    
+
+
+/**
+ * Reference to a field of type 'Int'
+ */
+export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
+    
+
+
+/**
+ * Reference to a field of type 'Int[]'
+ */
+export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
+    
 
 /**
  * Batch Payload for updateMany & deleteMany & createMany
@@ -607,7 +762,9 @@ export interface PrismaClientOptionsWithAdapter extends PrismaClientBaseOptions 
  * Learn more about driver adapters: https://pris.ly/d/driver-adapters
  */
 export type PrismaClientOptions = PrismaClientOptionsWithAccelerateUrl | PrismaClientOptionsWithAdapter
-export type GlobalOmitConfig = {}
+export type GlobalOmitConfig = {
+  challenge?: Prisma.ChallengeOmit
+}
 
 /* Types for Logging */
 export type LogLevel = 'info' | 'query' | 'warn' | 'error'

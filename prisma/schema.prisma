@@ -11,3 +11,15 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+model Challenge {
+  id String @id @default(uuid(7)) @unique
+  title String
+  body String
+  public Boolean
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("challenges")
+}
