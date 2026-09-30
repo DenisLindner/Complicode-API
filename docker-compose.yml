@@ -1,0 +1,16 @@
+services:
+  postgres:
+    container_name: complicode_postgres
+    image: postgres:16
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=denis
+      - POSTGRES_PASSWORD=root
+      - POSTGRES_DB=complicode
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+volumes:
+  pg_data:
