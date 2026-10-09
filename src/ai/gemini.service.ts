@@ -16,49 +16,69 @@ import {
   CHALLENGE_SYSTEM_INSTRUCTION,
 } from './prompts/challenge.prompt';
 
-const REQUEST_TIMEOUT_MS = 90_000;
+const REQUEST_TIMEOUT_MS = 60_000;
 
 @Injectable()
 export class GeminiService {
   private readonly logger = new Logger(GeminiService.name);
   private readonly client: GoogleGenAI;
-  private readonly model: string;
+  /** Primary model first; the others are tried when it fails or is overloaded. */
+  private readonly models: string[];
 
   constructor(config: ConfigService) {
     this.client = new GoogleGenAI({
       apiKey: config.getOrThrow<string>('GEMINI_API_KEY'),
       httpOptions: { timeout: REQUEST_TIMEOUT_MS },
     });
-    this.model = config.getOrThrow<string>('GEMINI_MODEL');
+    const fallbacks = (config.get<string>('GEMINI_FALLBACK_MODELS') ?? '')
+      .split(',')
+      .map((model) => model.trim())
+      .filter(Boolean);
+    this.models = [
+      ...new Set([config.getOrThrow<string>('GEMINI_MODEL'), ...fallbacks]),
+    ];
   }
 
   async generateChallenge(
     input: ChallengeGenerationInput,
   ): Promise<ChallengeGenerationResult> {
-    try {
-      const response = await this.client.models.generateContent({
-        model: this.model,
-        contents: buildChallengePrompt(input),
-        config: {
-          systemInstruction: CHALLENGE_SYSTEM_INSTRUCTION,
-          temperature: 1,
-          responseMimeType: 'application/json',
-          responseJsonSchema: CHALLENGE_RESPONSE_SCHEMA,
-        },
-      });
+    const contents = buildChallengePrompt(input);
 
-      return {
-        content: this.parse(response.text),
-        model: response.modelVersion ?? this.model,
-      };
-    } catch (error) {
-      this.logger.error(
-        `Challenge generation failed: ${(error as Error).message}`,
-      );
-      throw new ServiceUnavailableException(
-        'Could not generate the challenge, try again later',
-      );
+    for (const model of this.models) {
+      try {
+        return await this.generateWith(model, contents);
+      } catch (error) {
+        this.logger.warn(
+          `Challenge generation with ${model} failed: ${(error as Error).message}`,
+        );
+      }
     }
+
+    this.logger.error('Challenge generation failed with every model');
+    throw new ServiceUnavailableException(
+      'Could not generate the challenge, try again later',
+    );
+  }
+
+  private async generateWith(
+    model: string,
+    contents: string,
+  ): Promise<ChallengeGenerationResult> {
+    const response = await this.client.models.generateContent({
+      model,
+      contents,
+      config: {
+        systemInstruction: CHALLENGE_SYSTEM_INSTRUCTION,
+        temperature: 1,
+        responseMimeType: 'application/json',
+        responseJsonSchema: CHALLENGE_RESPONSE_SCHEMA,
+      },
+    });
+
+    return {
+      content: this.parse(response.text),
+      model: response.modelVersion ?? model,
+    };
   }
 
   private parse(text: string | undefined): GeneratedChallenge {
