@@ -33,4 +33,6 @@ export const envValidationSchema = Joi.object({
   WHATSAPP_META_ACCESS_TOKEN: requiredWhen('WHATSAPP_PROVIDER', 'meta'),
   WHATSAPP_META_TEMPLATE_NAME: Joi.string().default('verification_code'),
   WHATSAPP_META_TEMPLATE_LANGUAGE: Joi.string().default('pt_BR'),
+  GEMINI_API_KEY: Joi.string().required(),
+  GEMINI_MODEL: Joi.string().default('gemini-flash-latest'),
 });

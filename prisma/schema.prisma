@@ -11,16 +11,57 @@ datasource db {
   provider = "postgresql"
 }
 
+enum ChallengeStatus {
+  GENERATING
+  READY
+  FAILED
+}
+
 model Challenge {
-  id     String  @id @default(uuid(7))
-  title  String
-  body   String
-  public Boolean
+  id                String          @id @default(uuid(7))
+  userId            String
+  stackId           String
+  frameworkId       String
+  level             ChallengeLevel
+  status            ChallengeStatus @default(GENERATING)
+  title             String?
+  context           String?
+  description       String?
+  technologies      String[]
+  deliverables      String[]
+  public            Boolean         @default(false)
+  regenerationsUsed Int             @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stack     Stack              @relation(fields: [stackId], references: [id])
+  framework Framework          @relation(fields: [frameworkId], references: [id])
+  versions  ChallengeVersion[]
+
+  @@index([userId, createdAt])
+  @@index([public, status, createdAt])
   @@map("challenges")
+}
+
+model ChallengeVersion {
+  id           String   @id @default(uuid(7))
+  challengeId  String
+  version      Int
+  title        String
+  context      String
+  description  String
+  technologies String[]
+  deliverables String[]
+  model        String
+
+  createdAt DateTime @default(now())
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, version])
+  @@map("challenge_versions")
 }
 
 model User {
@@ -35,6 +76,7 @@ model User {
 
   creditTransactions CreditTransaction[]
   verificationCodes  VerificationCode[]
+  challenges         Challenge[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -102,6 +144,7 @@ model Stack {
   name String
 
   frameworks Framework[]
+  challenges Challenge[]
 
   @@map("stacks")
 }
@@ -113,7 +156,8 @@ model Framework {
   language String
   active   Boolean @default(true)
 
-  stacks Stack[]
+  stacks     Stack[]
+  challenges Challenge[]
 
   @@map("frameworks")
 }
