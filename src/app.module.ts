@@ -7,6 +7,7 @@ import { CatalogModule } from './catalog/catalog.module';
 import { ChallengeModule } from './challenge/challenge.module';
 import { CreditModule } from './credit/credit.module';
 import { envValidationSchema } from './config/env.validation';
+import { PaymentModule } from './payment/payment.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UserModule } from './user/user.module';
 import { VerificationModule } from './verification/verification.module';
@@ -25,6 +26,7 @@ import { VerificationModule } from './verification/verification.module';
     VerificationModule,
     CatalogModule,
     ChallengeModule,
+    PaymentModule,
   ],
   controllers: [],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

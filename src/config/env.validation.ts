@@ -1,4 +1,5 @@
 import Joi from 'joi';
+import { ABACATEPAY_WEBHOOK_PUBLIC_KEY } from '../payment/payment.constants';
 
 /** A string that is required only when `field` equals `value`. */
 function requiredWhen(field: string, value: string) {
@@ -35,4 +36,13 @@ export const envValidationSchema = Joi.object({
   WHATSAPP_META_TEMPLATE_LANGUAGE: Joi.string().default('pt_BR'),
   GEMINI_API_KEY: Joi.string().required(),
   GEMINI_MODEL: Joi.string().default('gemini-flash-latest'),
+  ABACATEPAY_API_URL: Joi.string()
+    .uri()
+    .default('https://api.abacatepay.com/v2'),
+  ABACATEPAY_API_KEY: Joi.string().required(),
+  ABACATEPAY_WEBHOOK_SECRET: Joi.string().min(16).required(),
+  ABACATEPAY_WEBHOOK_PUBLIC_KEY: Joi.string().default(
+    ABACATEPAY_WEBHOOK_PUBLIC_KEY,
+  ),
+  ABACATEPAY_CREDITS_PRODUCT_ID: Joi.string().required(),
 });
