@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module';
+import { CatalogModule } from './catalog/catalog.module';
 import { ChallengeModule } from './challenge/challenge.module';
 import { CreditModule } from './credit/credit.module';
 import { envValidationSchema } from './config/env.validation';
@@ -22,6 +23,7 @@ import { VerificationModule } from './verification/verification.module';
     UserModule,
     CreditModule,
     VerificationModule,
+    CatalogModule,
     ChallengeModule,
   ],
   controllers: [],

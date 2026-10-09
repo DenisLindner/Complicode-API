@@ -88,3 +88,32 @@ model VerificationCode {
   @@index([userId, channel])
   @@map("verification_codes")
 }
+
+enum ChallengeLevel {
+  INTERN
+  JUNIOR
+  MID
+  SENIOR
+}
+
+model Stack {
+  id   String @id @default(uuid(7))
+  slug String @unique
+  name String
+
+  frameworks Framework[]
+
+  @@map("stacks")
+}
+
+model Framework {
+  id       String  @id @default(uuid(7))
+  slug     String  @unique
+  name     String
+  language String
+  active   Boolean @default(true)
+
+  stacks Stack[]
+
+  @@map("frameworks")
+}
