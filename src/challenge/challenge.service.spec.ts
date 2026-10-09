@@ -1,4 +1,5 @@
 import { ServiceUnavailableException } from '@nestjs/common';
+import { GENERATED_CHALLENGE } from '../../test/fixtures/generated-challenge';
 import { GeminiService } from '../ai/gemini.service';
 import { CatalogService } from '../catalog/catalog.service';
 import { CreditService } from '../credit/credit.service';
@@ -15,13 +16,6 @@ describe('ChallengeService', () => {
   const user = { id: 'user-1' } as User;
   const stack = { id: 'stack-1', name: 'Backend' };
   const framework = { id: 'fw-1', name: 'NestJS', language: 'TypeScript' };
-  const content = {
-    title: 'Colmeia Conectada',
-    context: 'Contexto',
-    description: 'Desafio',
-    technologies: ['NestJS', 'PostgreSQL'],
-    deliverables: ['API', 'Testes', 'README'],
-  };
 
   let prisma: {
     $transaction: jest.Mock;
@@ -44,15 +38,19 @@ describe('ChallengeService', () => {
         update: jest.fn().mockResolvedValue({ id: 'ch-1' }),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
         findFirst: jest.fn(),
-        findMany: jest.fn().mockResolvedValue([{ title: 'Antigo' }]),
+        findMany: jest.fn().mockResolvedValue([
+          { title: 'Sistema de Reservas', projectName: 'DeskFlow' },
+          { title: 'Legado', projectName: null },
+        ]),
       },
       challengeVersion: { create: jest.fn() },
     };
     credit = { debit: jest.fn(), grant: jest.fn() };
     gemini = {
-      generateChallenge: jest
-        .fn()
-        .mockResolvedValue({ content, model: 'gemini-test' }),
+      generateChallenge: jest.fn().mockResolvedValue({
+        challenge: GENERATED_CHALLENGE,
+        model: 'gemini-test',
+      }),
     };
     const catalog = {
       findSelection: jest.fn().mockResolvedValue({ stack, framework }),
@@ -83,11 +81,13 @@ describe('ChallengeService', () => {
         referenceId: 'ch-1',
       });
       expect(gemini.generateChallenge).toHaveBeenCalledWith(
-        expect.objectContaining({ avoidTitles: ['Antigo'] }),
+        expect.objectContaining({
+          avoidTitles: ['Sistema de Reservas (DeskFlow)', 'Legado'],
+        }),
       );
       expect(prisma.challenge.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: { ...content, status: ChallengeStatus.READY },
+          data: { ...GENERATED_CHALLENGE, status: ChallengeStatus.READY },
         }),
       );
       expect(prisma.challengeVersion.create).toHaveBeenCalledWith({
@@ -95,7 +95,7 @@ describe('ChallengeService', () => {
           challengeId: 'ch-1',
           version: 1,
           model: 'gemini-test',
-          ...content,
+          ...GENERATED_CHALLENGE,
         },
       });
     });
@@ -144,7 +144,7 @@ describe('ChallengeService', () => {
           challengeId: 'ch-1',
           version: 2,
           model: 'gemini-test',
-          ...content,
+          ...GENERATED_CHALLENGE,
         },
       });
     });

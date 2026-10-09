@@ -25,10 +25,11 @@ model Challenge {
   level             ChallengeLevel
   status            ChallengeStatus @default(GENERATING)
   title             String?
-  context           String?
-  description       String?
-  technologies      String[]
-  deliverables      String[]
+  projectName       String?
+  industry          String?
+  summary           String?
+  /// Sections of the challenge document (see ChallengeContent in src/ai/ai.types.ts).
+  content           Json?
   public            Boolean         @default(false)
   regenerationsUsed Int             @default(0)
 
@@ -46,15 +47,15 @@ model Challenge {
 }
 
 model ChallengeVersion {
-  id           String   @id @default(uuid(7))
-  challengeId  String
-  version      Int
-  title        String
-  context      String
-  description  String
-  technologies String[]
-  deliverables String[]
-  model        String
+  id          String @id @default(uuid(7))
+  challengeId String
+  version     Int
+  title       String
+  projectName String
+  industry    String
+  summary     String
+  content     Json
+  model       String
 
   createdAt DateTime @default(now())
 

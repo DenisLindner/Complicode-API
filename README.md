@@ -1,6 +1,6 @@
 # Complicode API
 
-Backend do **Complicode**, um gerador de ideias de projetos de programação que fogem do convencional. O usuário escolhe a stack, o framework e o nível, e a API gera com o Gemini um desafio único no formato **Contexto, Desafio, Stack e Entregas**.
+Backend do **Complicode**, um gerador de desafios técnicos que simulam problemas reais das empresas. O usuário escolhe a stack, o framework e o nível, e a API gera com o Gemini um desafio único no formato de um briefing técnico (veja [Formato do desafio](#formato-do-desafio)).
 
 Construído com NestJS 12, Prisma 7 (PostgreSQL), Keycloak, Gemini e AbacatePay.
 
@@ -33,7 +33,7 @@ Next.js ──► Complicode API (NestJS) ──► Keycloak (usuários e tokens
 | `telegram` | Cliente da Telegram Bot API |
 | `credit` | Saldo e extrato (ledger idempotente) |
 | `catalog` | Stacks, frameworks e níveis |
-| `ai` | Integração com o Gemini (saída JSON estruturada) |
+| `ai` | Integração com o Gemini (saída JSON estruturada, validada antes de salvar) |
 | `challenge` | Geração, regeneração, listagens e visibilidade dos desafios |
 | `payment` | Checkout da AbacatePay e webhook |
 
@@ -82,7 +82,27 @@ Todas são validadas no boot (`src/config/env.validation.ts`). As principais:
 
 ### Gemini
 
-Crie uma chave gratuita em https://aistudio.google.com/apikey. O plano gratuito tem limite de requisições por minuto e por dia, então a rota de geração tem rate limit próprio. Como os modelos gratuitos às vezes ficam sobrecarregados (erro 503), a API tenta os modelos de `GEMINI_FALLBACK_MODELS` antes de desistir e estornar o crédito.
+Crie uma chave gratuita em https://aistudio.google.com/apikey. O plano gratuito tem limite de requisições por minuto e por dia, então a rota de geração tem rate limit próprio. Como os modelos gratuitos às vezes ficam sobrecarregados (erro 503), a API tenta os modelos de `GEMINI_FALLBACK_MODELS` antes de desistir e estornar o crédito. Uma geração leva em torno de 20 a 30 segundos.
+
+### Formato do desafio
+
+Cada desafio parte de um cenário real da indústria (conciliação bancária, venda de ingressos com alta concorrência, triagem de sinistros, rastreabilidade no agro etc.) e segue a estrutura:
+
+| Seção | Campo |
+| - | - |
+| Título e nome do produto | `title`, `projectName` |
+| Setor e resumo (usados nas listagens) | `industry`, `summary` |
+| Contexto | `content.context` (parágrafos) |
+| Requisitos funcionais e não funcionais | `content.functionalRequirements`, `content.nonFunctionalRequirements` |
+| O que usar, por camada | `content.technologies` |
+| Entregas | `content.deliverables` |
+| Tempo para conclusão | `content.deadline` |
+| Guia de implementação | `content.implementationGuide` |
+| O que será avaliado | `content.evaluationCriteria` |
+| Estrutura de pastas sugerida | `content.folderStructure` |
+| Mensagem final | `content.closingNote` |
+
+O prazo e o escopo variam com o nível. As listagens não trazem o `content`; ele vem no detalhe (`GET /challenges/:id`). `GET /challenges/:id/markdown` devolve o desafio pronto em markdown, para colar no README do repositório.
 
 ### Email (Gmail SMTP, gratuito)
 
@@ -140,6 +160,7 @@ Todas as rotas têm o prefixo `/api` e exigem `Authorization: Bearer <accessToke
 | GET | `/challenges` | Meus desafios (paginado) |
 | GET | `/challenges/public` | Galeria pública (público) |
 | GET | `/challenges/:id` | Detalhe: o dono vê todas as versões; os demais, só desafios públicos |
+| GET | `/challenges/:id/markdown` | O desafio em markdown (`text/markdown`), com as mesmas regras de visibilidade |
 | PATCH | `/challenges/:id/visibility` | Torna público ou privado (`{ "public": true }`) |
 | DELETE | `/challenges/:id` | Remove um desafio |
 | POST | `/payments/checkout` | Cria o checkout dos 10 créditos e retorna a `checkoutUrl` |

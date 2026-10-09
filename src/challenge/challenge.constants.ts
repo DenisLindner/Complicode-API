@@ -10,3 +10,6 @@ export const CHALLENGE_SUMMARY_INCLUDE = {
   stack: { select: { id: true, slug: true, name: true } },
   framework: { select: { id: true, slug: true, name: true, language: true } },
 } as const;
+
+/** Listings leave out the document, which is only returned by the detail. */
+export const CHALLENGE_LIST_OMIT = { content: true } as const;
