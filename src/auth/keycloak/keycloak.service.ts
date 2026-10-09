@@ -126,10 +126,19 @@ export class KeycloakService {
     return id;
   }
 
-  async updateUser(id: string, data: Record<string, unknown>) {
+  async markEmailVerified(id: string) {
+    const current = await this.adminRequest(`/users/${id}`, { method: 'GET' });
+    if (!current.ok) {
+      this.logger.error(`Keycloak user lookup failed: ${current.status}`);
+      throw new InternalServerErrorException('Could not update user');
+    }
+
+    // PUT replaces the representation, so the current user is sent back with
+    // only the changed field to avoid wiping profile attributes.
+    const user = (await current.json()) as Record<string, unknown>;
     const response = await this.adminRequest(`/users/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: JSON.stringify({ ...user, emailVerified: true }),
     });
 
     if (!response.ok) {

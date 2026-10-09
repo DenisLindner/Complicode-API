@@ -34,6 +34,7 @@ model User {
   credits       Int     @default(0)
 
   creditTransactions CreditTransaction[]
+  verificationCodes  VerificationCode[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -63,4 +64,27 @@ model CreditTransaction {
   @@unique([userId, type, referenceId])
   @@index([userId, createdAt])
   @@map("credit_transactions")
+}
+
+enum VerificationChannel {
+  EMAIL
+  PHONE
+}
+
+model VerificationCode {
+  id         String              @id @default(uuid(7))
+  userId     String
+  channel    VerificationChannel
+  target     String
+  codeHash   String
+  attempts   Int                 @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, channel])
+  @@map("verification_codes")
 }
