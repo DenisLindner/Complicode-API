@@ -37,6 +37,15 @@ Next.js ──► Complicode API (NestJS) ──► Keycloak (usuários e tokens
 | `challenge` | Geração, regeneração, listagens e visibilidade dos desafios |
 | `payment` | Checkout da AbacatePay e webhook |
 
+### Acesso pelo frontend (BFF)
+
+Só o servidor do [Complicode Web](https://github.com/DenisLindner/Complicode-Web) chama a API; o navegador nunca fala com ela nem vê os tokens. Por isso:
+
+- Toda rota exige o header `X-Internal-Key` igual a `INTERNAL_API_KEY` (403 sem ele), exceto os webhooks, que se autenticam pela própria assinatura. Sem a variável (dev), a API aceita qualquer chamada. Em produção ela é obrigatória.
+- O rate limit é por usuário quando há token e por IP do cliente quando não há. O IP real vem no header `X-Client-IP`, aceito só em requisições com a chave interna.
+- Não há CORS, e o Swagger (`/docs`) não é publicado em produção.
+- Em produção, deixe a API em rede privada e exponha só os webhooks, ou repasse-os pelo frontend.
+
 A autenticação usa o Keycloak com access token de **30 minutos** e refresh token de **3 dias** (rotacionado a cada uso). As configurações ficam em `keycloak/complicode-realm.json`.
 
 ## Requisitos
@@ -70,7 +79,8 @@ Todas são validadas no boot (`src/config/env.validation.ts`). As principais:
 
 | Variável | Descrição |
 | - | - |
-| `FRONTEND_URL` | Origem liberada no CORS e base das URLs de retorno do checkout |
+| `FRONTEND_URL` | Base das URLs de retorno do checkout |
+| `INTERNAL_API_KEY` | Chave compartilhada com o servidor do frontend (obrigatória em produção) |
 | `KEYCLOAK_*` | URL, realm e credenciais do client `complicode-api` |
 | `SMTP_*`, `MAIL_FROM` | Envio de email (em dev aponta para o Mailpit) |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME` | Bot que verifica o telefone (criado no @BotFather) |
@@ -138,7 +148,7 @@ O webhook valida o `webhookSecret` da URL e a assinatura HMAC do header `X-Webho
 
 ## Endpoints
 
-Todas as rotas têm o prefixo `/api` e exigem `Authorization: Bearer <accessToken>`, exceto as marcadas como públicas.
+Todas as rotas têm o prefixo `/api`, exigem `X-Internal-Key` (exceto os webhooks) e `Authorization: Bearer <accessToken>`, exceto as marcadas como públicas.
 
 | Método | Rota | Descrição |
 | - | - | - |
@@ -169,7 +179,7 @@ Todas as rotas têm o prefixo `/api` e exigem `Authorization: Bearer <accessToke
 | POST | `/webhooks/abacatepay` | Webhook da AbacatePay |
 | POST | `/webhooks/telegram` | Webhook do bot do Telegram (modo `webhook`) |
 
-Erros relevantes para o front: `401` (token inválido ou expirado), `402` (créditos insuficientes), `409` (email ou telefone em uso), `429` (rate limit ou cooldown de reenvio de código) e `503` (Gemini ou AbacatePay indisponível).
+Erros relevantes para o front: `401` (token inválido ou expirado), `403` (sem a chave interna), `402` (créditos insuficientes), `409` (email ou telefone em uso), `429` (rate limit ou cooldown de reenvio de código) e `503` (Gemini ou AbacatePay indisponível).
 
 ## Scripts
 

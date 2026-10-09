@@ -12,10 +12,6 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
   app.use(helmet());
-  app.enableCors({
-    origin: config.getOrThrow<string>('FRONTEND_URL'),
-    credentials: true,
-  });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -28,17 +24,26 @@ async function bootstrap() {
   );
   app.enableShutdownHooks();
 
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('Complicode API')
-    .setDescription('Gerador de desafios de programação')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  SwaggerModule.setup(
-    'docs',
-    app,
-    SwaggerModule.createDocument(app, swaggerConfig),
-  );
+  // Only the frontend server calls the API, so there is no CORS and the
+  // documentation is not published in production.
+  if (config.get<string>('NODE_ENV') !== 'production') {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('Complicode API')
+      .setDescription('Gerador de desafios de programação')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .addApiKey(
+        { type: 'apiKey', in: 'header', name: 'X-Internal-Key' },
+        'internal-key',
+      )
+      .addSecurityRequirements('internal-key')
+      .build();
+    SwaggerModule.setup(
+      'docs',
+      app,
+      SwaggerModule.createDocument(app, swaggerConfig),
+    );
+  }
 
   await app.listen(config.getOrThrow<number>('PORT'));
 }

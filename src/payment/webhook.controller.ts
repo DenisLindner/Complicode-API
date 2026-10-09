@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
+import { External } from '../common/decorators/external.decorator';
 import type { Request } from 'express';
 import { createHash } from 'node:crypto';
 import { Public } from '../auth/decorators/public.decorator';
@@ -22,6 +23,7 @@ import { PaymentService } from './payment.service';
 
 @ApiExcludeController()
 @Public()
+@External()
 @SkipThrottle()
 @Controller('webhooks')
 export class WebhookController {

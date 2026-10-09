@@ -17,6 +17,7 @@ export const envValidationSchema = Joi.object({
     .default('development'),
   PORT: Joi.number().port().default(3000),
   FRONTEND_URL: Joi.string().uri().default('http://localhost:3001'),
+  INTERNAL_API_KEY: requiredWhen('NODE_ENV', 'production').min(32),
   DATABASE_URL: Joi.string().uri().required(),
   KEYCLOAK_URL: Joi.string().uri().required(),
   KEYCLOAK_REALM: Joi.string().required(),
