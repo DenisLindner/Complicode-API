@@ -1,10 +1,9 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
   moduleFormat = "cjs"
 }
 
@@ -13,9 +12,9 @@ datasource db {
 }
 
 model Challenge {
-  id String @id @default(uuid(7))
-  title String
-  body String
+  id     String  @id @default(uuid(7))
+  title  String
+  body   String
   public Boolean
 
   createdAt DateTime @default(now())
@@ -32,9 +31,36 @@ model User {
   phone         String? @unique
   emailVerified Boolean @default(false)
   phoneVerified Boolean @default(false)
+  credits       Int     @default(0)
+
+  creditTransactions CreditTransaction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("users")
+}
+
+enum CreditTransactionType {
+  SIGNUP_BONUS
+  PURCHASE
+  CHALLENGE_GENERATION
+  REFUND
+}
+
+model CreditTransaction {
+  id           String                @id @default(uuid(7))
+  userId       String
+  type         CreditTransactionType
+  amount       Int
+  balanceAfter Int
+  referenceId  String
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type, referenceId])
+  @@index([userId, createdAt])
+  @@map("credit_transactions")
 }
