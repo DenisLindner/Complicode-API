@@ -6,7 +6,7 @@ Construído com NestJS 12, Prisma 7 (PostgreSQL), Keycloak, Gemini e AbacatePay.
 
 ## Regras de negócio
 
-- Ao verificar **email e telefone** (código por email e por WhatsApp), o usuário ganha **2 créditos**, uma única vez. Cada telefone só pode estar em uma conta.
+- Ao verificar **email e telefone** (código por email e contato compartilhado com o bot do Telegram), o usuário ganha **2 créditos**, uma única vez. Cada telefone só pode estar em uma conta.
 - Cada desafio gerado consome **1 crédito**. Se a geração falhar, o crédito é estornado.
 - Cada desafio pode ser **regerado 1 vez, sem custo**. As duas versões ficam salvas.
 - O usuário pode comprar **10 créditos por R$ 10,00** pelo checkout da AbacatePay (PIX ou cartão).
@@ -21,14 +21,16 @@ Next.js ──► Complicode API (NestJS) ──► Keycloak (usuários e tokens
                     ├─► PostgreSQL (Prisma)
                     ├─► Gemini API (geração dos desafios)
                     ├─► AbacatePay v2 (checkout e webhook)
-                    └─► SMTP / WhatsApp Cloud API (códigos de verificação)
+                    ├─► SMTP (código de verificação por email)
+                    └─► Telegram Bot API (verificação do telefone)
 ```
 
 | Módulo | Responsabilidade |
 | - | - |
 | `auth` | Cadastro, login, refresh e logout via Keycloak; guard JWT global (`@Public()` libera a rota) |
 | `user` | Usuário local, vinculado ao Keycloak pelo `sub` (`GET /users/me`) |
-| `verification` | Códigos de 6 dígitos por email e WhatsApp e bônus de cadastro |
+| `verification` | Código de 6 dígitos por email, bot do Telegram para o telefone e bônus de cadastro |
+| `telegram` | Cliente da Telegram Bot API |
 | `credit` | Saldo e extrato (ledger idempotente) |
 | `catalog` | Stacks, frameworks e níveis |
 | `ai` | Integração com o Gemini (saída JSON estruturada) |
@@ -71,8 +73,9 @@ Todas são validadas no boot (`src/config/env.validation.ts`). As principais:
 | `FRONTEND_URL` | Origem liberada no CORS e base das URLs de retorno do checkout |
 | `KEYCLOAK_*` | URL, realm e credenciais do client `complicode-api` |
 | `SMTP_*`, `MAIL_FROM` | Envio de email (em dev aponta para o Mailpit) |
-| `WHATSAPP_PROVIDER` | `console` (dev: o código aparece no log) ou `meta` |
-| `WHATSAPP_META_*` | Credenciais da WhatsApp Cloud API e nome do template |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME` | Bot que verifica o telefone (criado no @BotFather) |
+| `TELEGRAM_UPDATES_MODE` | `polling` (dev), `webhook` (produção) ou `disabled` |
+| `TELEGRAM_WEBHOOK_URL`, `TELEGRAM_WEBHOOK_SECRET` | Só no modo webhook |
 | `GEMINI_API_KEY`, `GEMINI_MODEL` | Chave do Google AI Studio e modelo (padrão `gemini-flash-latest`) |
 | `ABACATEPAY_*` | Chave da API, secret do webhook e ID do produto de créditos |
 
@@ -80,11 +83,29 @@ Todas são validadas no boot (`src/config/env.validation.ts`). As principais:
 
 Crie uma chave gratuita em https://aistudio.google.com/apikey. O plano gratuito tem limite de requisições por minuto e por dia, então a rota de geração tem rate limit próprio.
 
-### WhatsApp (Meta Cloud API)
+### Email (Gmail SMTP, gratuito)
 
-1. Crie um app no Meta for Developers com o produto WhatsApp e anote o *Phone number ID* e o *access token*.
-2. Crie um template da categoria **Authentication**, com botão de copiar código. O nome padrão esperado é `verification_code`, em `pt_BR`.
-3. Configure `WHATSAPP_PROVIDER=meta` e as variáveis `WHATSAPP_META_*`.
+Em dev os emails vão para o Mailpit. Em produção, use um Gmail próprio do projeto (limite de ~500 emails por dia):
+
+1. Ative a verificação em 2 etapas da conta e gere uma senha de app em https://myaccount.google.com/apppasswords.
+2. Configure `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_SECURE=true`, `SMTP_USER=<seu gmail>`, `SMTP_PASSWORD=<senha de app>` e `MAIL_FROM="Complicode <seu gmail>"`.
+
+### Telefone (bot do Telegram, gratuito)
+
+O telefone é verificado por um bot do Telegram. O número vem do próprio Telegram, então não há SMS nem custo.
+
+1. O front chama `POST /verification/phone/start` e abre o `deepLink` retornado (`https://t.me/<bot>?start=<token>`). O link expira em 10 minutos.
+2. No Telegram, o usuário toca em **Iniciar** e depois em **📱 Compartilhar meu telefone**.
+3. A API confere que o contato é da própria conta do Telegram, salva o telefone e, se o email também estiver verificado, concede o bônus.
+4. O front acompanha o resultado consultando `GET /verification`.
+
+Para configurar, crie o bot com o [@BotFather](https://t.me/BotFather) (`/newbot`) e preencha `TELEGRAM_BOT_TOKEN` e `TELEGRAM_BOT_USERNAME`. Em `TELEGRAM_UPDATES_MODE`:
+
+- `polling` (dev): a API busca as mensagens no Telegram e não precisa de URL pública.
+- `webhook` (produção): no boot, a API registra `TELEGRAM_WEBHOOK_URL` (`https://<sua-api>/api/webhooks/telegram`) com o `TELEGRAM_WEBHOOK_SECRET`.
+- `disabled`: o bot não recebe mensagens.
+
+Cada conta do Telegram e cada telefone ficam vinculados a um único usuário.
 
 ### AbacatePay
 
@@ -108,8 +129,7 @@ Todas as rotas têm o prefixo `/api` e exigem `Authorization: Bearer <accessToke
 | GET | `/verification` | Status da verificação e créditos |
 | POST | `/verification/email/send` | Envia o código por email |
 | POST | `/verification/email/confirm` | Confirma o código do email |
-| POST | `/verification/phone/send` | Envia o código por WhatsApp (`{ "phone": "+5511999999999" }`) |
-| POST | `/verification/phone/confirm` | Confirma o código do telefone |
+| POST | `/verification/phone/start` | Retorna o `deepLink` do bot do Telegram que verifica o telefone |
 | GET | `/credits` | Saldo |
 | GET | `/credits/transactions` | Extrato paginado (`?page=&limit=`) |
 | GET | `/catalog/stacks` | Stacks com seus frameworks (público) |
@@ -125,6 +145,7 @@ Todas as rotas têm o prefixo `/api` e exigem `Authorization: Bearer <accessToke
 | GET | `/payments` | Meus pagamentos |
 | GET | `/payments/:id` | Status de um pagamento |
 | POST | `/webhooks/abacatepay` | Webhook da AbacatePay |
+| POST | `/webhooks/telegram` | Webhook do bot do Telegram (modo `webhook`) |
 
 Erros relevantes para o front: `401` (token inválido ou expirado), `402` (créditos insuficientes), `409` (email ou telefone em uso), `429` (rate limit ou cooldown de reenvio de código) e `503` (Gemini ou AbacatePay indisponível).
 

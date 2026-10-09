@@ -28,12 +28,13 @@ export const envValidationSchema = Joi.object({
   SMTP_USER: Joi.string().allow('').default(''),
   SMTP_PASSWORD: Joi.string().allow('').default(''),
   MAIL_FROM: Joi.string().required(),
-  WHATSAPP_PROVIDER: Joi.string().valid('console', 'meta').default('console'),
-  WHATSAPP_META_API_VERSION: Joi.string().default('v23.0'),
-  WHATSAPP_META_PHONE_NUMBER_ID: requiredWhen('WHATSAPP_PROVIDER', 'meta'),
-  WHATSAPP_META_ACCESS_TOKEN: requiredWhen('WHATSAPP_PROVIDER', 'meta'),
-  WHATSAPP_META_TEMPLATE_NAME: Joi.string().default('verification_code'),
-  WHATSAPP_META_TEMPLATE_LANGUAGE: Joi.string().default('pt_BR'),
+  TELEGRAM_BOT_TOKEN: Joi.string().required(),
+  TELEGRAM_BOT_USERNAME: Joi.string().required(),
+  TELEGRAM_UPDATES_MODE: Joi.string()
+    .valid('polling', 'webhook', 'disabled')
+    .default('polling'),
+  TELEGRAM_WEBHOOK_URL: requiredWhen('TELEGRAM_UPDATES_MODE', 'webhook'),
+  TELEGRAM_WEBHOOK_SECRET: requiredWhen('TELEGRAM_UPDATES_MODE', 'webhook'),
   GEMINI_API_KEY: Joi.string().required(),
   GEMINI_MODEL: Joi.string().default('gemini-flash-latest'),
   ABACATEPAY_API_URL: Joi.string()
