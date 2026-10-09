@@ -11,6 +11,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { ApiExcludeController } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
+import { External } from '../../common/decorators/external.decorator';
 import { timingSafeEqual } from 'node:crypto';
 import { Public } from '../../auth/decorators/public.decorator';
 import type { TelegramUpdate } from '../../telegram/telegram.types';
@@ -18,6 +19,7 @@ import { TelegramBotService } from './telegram-bot.service';
 
 @ApiExcludeController()
 @Public()
+@External()
 @SkipThrottle()
 @Controller('webhooks')
 export class TelegramWebhookController {

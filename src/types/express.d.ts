@@ -4,6 +4,8 @@ declare global {
   namespace Express {
     interface Request {
       user?: AppUser;
+      /** True when the request came from the frontend server (BFF). */
+      fromFrontendServer?: boolean;
     }
   }
 }
