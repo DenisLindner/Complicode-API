@@ -1,13 +1,16 @@
 import {
   BadRequestException,
-  ConflictException,
   HttpException,
   HttpStatus,
-  Inject,
   Injectable,
   Logger,
 } from '@nestjs/common';
-import { createHash, randomInt, timingSafeEqual } from 'node:crypto';
+import {
+  createHash,
+  randomBytes,
+  randomInt,
+  timingSafeEqual,
+} from 'node:crypto';
 import { KeycloakService } from '../auth/keycloak/keycloak.service';
 import {
   SIGNUP_BONUS_CREDITS,
@@ -16,15 +19,14 @@ import {
 import { CreditService } from '../credit/credit.service';
 import {
   CreditTransactionType,
+  type Prisma,
   type User,
   VerificationChannel,
 } from '../generated/prisma/client';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  WHATSAPP_PROVIDER,
-  type WhatsAppProvider,
-} from '../whatsapp/whatsapp.provider';
+import { TelegramService } from '../telegram/telegram.service';
+import { PhoneVerificationError } from './phone-verification.error';
 import {
   CODE_TTL_MS,
   MAX_ATTEMPTS,
@@ -40,7 +42,7 @@ export class VerificationService {
     private readonly credit: CreditService,
     private readonly mail: MailService,
     private readonly keycloak: KeycloakService,
-    @Inject(WHATSAPP_PROVIDER) private readonly whatsapp: WhatsAppProvider,
+    private readonly telegram: TelegramService,
   ) {}
 
   async getStatus(userId: string) {
@@ -60,33 +62,27 @@ export class VerificationService {
       throw new BadRequestException('Email already verified');
     }
 
-    await this.issueCode(user, VerificationChannel.EMAIL, user.email, (code) =>
-      this.mail.sendVerificationCode(user.email, user.name, code),
-    );
+    const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
+    const created = await this.issueCode(user.id, VerificationChannel.EMAIL, {
+      target: user.email,
+      codeHash: this.hash(`${user.id}:${code}`),
+    });
+
+    try {
+      await this.mail.sendVerificationCode(user.email, user.name, code);
+    } catch (error) {
+      await this.prisma.verificationCode.delete({ where: { id: created.id } });
+      throw error;
+    }
   }
 
-  async sendPhoneCode(user: User, phone: string) {
-    if (user.phoneVerified) {
-      throw new BadRequestException('Phone already verified');
-    }
-
-    const owner = await this.prisma.user.findUnique({ where: { phone } });
-    if (owner && owner.id !== user.id) {
-      throw new ConflictException('Phone already in use');
-    }
-
-    await this.issueCode(user, VerificationChannel.PHONE, phone, (code) =>
-      this.whatsapp.sendVerificationCode(phone, code),
-    );
-  }
-
-  /**
-   * Confirms the latest code of the channel. When both email and phone end up
-   * verified, the signup bonus is granted (only once per user).
-   */
-  async confirm(user: User, channel: VerificationChannel, code: string) {
+  async confirmEmail(user: User, code: string) {
     const record = await this.prisma.verificationCode.findFirst({
-      where: { userId: user.id, channel, consumedAt: null },
+      where: {
+        userId: user.id,
+        channel: VerificationChannel.EMAIL,
+        consumedAt: null,
+      },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -96,7 +92,7 @@ export class VerificationService {
     if (record.attempts >= MAX_ATTEMPTS) {
       throw new BadRequestException('Too many attempts, request a new code');
     }
-    if (!this.matches(record.codeHash, user.id, code)) {
+    if (!this.safeEqual(record.codeHash, this.hash(`${user.id}:${code}`))) {
       await this.prisma.verificationCode.update({
         where: { id: record.id },
         data: { attempts: { increment: 1 } },
@@ -104,54 +100,156 @@ export class VerificationService {
       throw new BadRequestException('Invalid verification code');
     }
 
-    const bonusGranted = await this.prisma.$transaction(async (tx) => {
+    const bonusGranted = await this.complete(record.id, user.id, {
+      emailVerified: true,
+    });
+    if (bonusGranted === undefined) {
+      throw new BadRequestException('Verification code already used');
+    }
+
+    await this.keycloak
+      .markEmailVerified(user.keycloakId)
+      .catch((error: Error) =>
+        this.logger.warn(`Keycloak email sync failed: ${error.message}`),
+      );
+
+    return { ...(await this.getStatus(user.id)), bonusGranted };
+  }
+
+  /**
+   * Starts the phone verification: the user opens the Telegram deep link and
+   * shares the contact of their own Telegram account with the bot.
+   */
+  async startPhoneVerification(user: User) {
+    if (user.phoneVerified) {
+      throw new BadRequestException('Phone already verified');
+    }
+
+    const token = randomBytes(12).toString('base64url');
+    const created = await this.issueCode(user.id, VerificationChannel.PHONE, {
+      codeHash: this.hash(token),
+    });
+
+    return {
+      deepLink: this.telegram.deepLink(token),
+      expiresAt: created.expiresAt,
+    };
+  }
+
+  /** Step 1 in the bot: `/start <token>` links the Telegram user to the code. */
+  async linkTelegram(token: string, telegramId: string) {
+    const record = await this.prisma.verificationCode.findFirst({
+      where: {
+        codeHash: this.hash(token),
+        channel: VerificationChannel.PHONE,
+        consumedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      include: { user: true },
+    });
+
+    if (!record) {
+      throw new PhoneVerificationError('CODE_NOT_FOUND');
+    }
+    if (record.user.phoneVerified) {
+      throw new PhoneVerificationError('ALREADY_VERIFIED');
+    }
+
+    const owner = await this.prisma.user.findUnique({ where: { telegramId } });
+    if (owner && owner.id !== record.userId) {
+      throw new PhoneVerificationError('TELEGRAM_IN_USE');
+    }
+
+    await this.prisma.verificationCode.update({
+      where: { id: record.id },
+      data: { externalId: telegramId },
+    });
+  }
+
+  /** Step 2 in the bot: the shared contact proves the phone number. */
+  async confirmTelegramContact(
+    telegramId: string,
+    contact: { phone: string; telegramId?: string },
+  ) {
+    if (contact.telegramId !== telegramId) {
+      throw new PhoneVerificationError('NOT_OWN_CONTACT');
+    }
+
+    const record = await this.prisma.verificationCode.findFirst({
+      where: {
+        externalId: telegramId,
+        channel: VerificationChannel.PHONE,
+        consumedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!record) {
+      throw new PhoneVerificationError('NOT_STARTED');
+    }
+
+    const phone = toE164(contact.phone);
+    const owner = await this.prisma.user.findUnique({ where: { phone } });
+    if (owner && owner.id !== record.userId) {
+      throw new PhoneVerificationError('PHONE_IN_USE');
+    }
+
+    const bonusGranted = await this.complete(record.id, record.userId, {
+      phone,
+      phoneVerified: true,
+      telegramId,
+    });
+    if (bonusGranted === undefined) {
+      throw new PhoneVerificationError('NOT_STARTED');
+    }
+
+    return { bonusGranted };
+  }
+
+  /**
+   * Consumes the code and applies the user changes. When both email and phone
+   * end up verified, the signup bonus is granted (only once per user).
+   * Returns undefined when the code was consumed concurrently.
+   */
+  private async complete(
+    codeId: string,
+    userId: string,
+    data: Prisma.UserUpdateInput,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
       const { count } = await tx.verificationCode.updateMany({
-        where: { id: record.id, consumedAt: null },
-        data: { consumedAt: new Date() },
+        where: { id: codeId, consumedAt: null },
+        data: {
+          consumedAt: new Date(),
+          ...(typeof data.phone === 'string' && { target: data.phone }),
+        },
       });
       if (count === 0) {
-        throw new BadRequestException('Verification code already used');
+        return undefined;
       }
 
-      const updated = await tx.user.update({
-        where: { id: user.id },
-        data:
-          channel === VerificationChannel.EMAIL
-            ? { emailVerified: true }
-            : { phone: record.target, phoneVerified: true },
-      });
-
+      const updated = await tx.user.update({ where: { id: userId }, data });
       if (!updated.emailVerified || !updated.phoneVerified) {
         return false;
       }
 
       return this.credit.grant(tx, {
-        userId: user.id,
+        userId,
         amount: SIGNUP_BONUS_CREDITS,
         type: CreditTransactionType.SIGNUP_BONUS,
         referenceId: SIGNUP_BONUS_REFERENCE,
       });
     });
-
-    if (channel === VerificationChannel.EMAIL) {
-      await this.keycloak
-        .markEmailVerified(user.keycloakId)
-        .catch((error: Error) =>
-          this.logger.warn(`Keycloak email sync failed: ${error.message}`),
-        );
-    }
-
-    return { ...(await this.getStatus(user.id)), bonusGranted };
   }
 
+  /** Replaces pending codes of the channel, respecting the resend cooldown. */
   private async issueCode(
-    user: User,
+    userId: string,
     channel: VerificationChannel,
-    target: string,
-    send: (code: string) => Promise<void>,
+    data: { codeHash: string; target?: string },
   ) {
     const last = await this.prisma.verificationCode.findFirst({
-      where: { userId: user.id, channel, consumedAt: null },
+      where: { userId, channel, consumedAt: null },
       orderBy: { createdAt: 'desc' },
     });
     if (last && Date.now() - last.createdAt.getTime() < RESEND_COOLDOWN_MS) {
@@ -161,38 +259,33 @@ export class VerificationService {
       );
     }
 
-    const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
     const [, created] = await this.prisma.$transaction([
       this.prisma.verificationCode.deleteMany({
-        where: { userId: user.id, channel, consumedAt: null },
+        where: { userId, channel, consumedAt: null },
       }),
       this.prisma.verificationCode.create({
         data: {
-          userId: user.id,
+          userId,
           channel,
-          target,
-          codeHash: this.hash(user.id, code),
+          ...data,
           expiresAt: new Date(Date.now() + CODE_TTL_MS),
         },
       }),
     ]);
 
-    try {
-      await send(code);
-    } catch (error) {
-      await this.prisma.verificationCode.delete({ where: { id: created.id } });
-      throw error;
-    }
+    return created;
   }
 
-  private hash(userId: string, code: string) {
-    return createHash('sha256').update(`${userId}:${code}`).digest('hex');
+  private hash(value: string) {
+    return createHash('sha256').update(value).digest('hex');
   }
 
-  private matches(codeHash: string, userId: string, code: string) {
-    return timingSafeEqual(
-      Buffer.from(codeHash, 'hex'),
-      Buffer.from(this.hash(userId, code), 'hex'),
-    );
+  private safeEqual(a: string, b: string) {
+    return timingSafeEqual(Buffer.from(a, 'hex'), Buffer.from(b, 'hex'));
   }
+}
+
+/** Telegram sends the number with or without the leading "+". */
+function toE164(phone: string) {
+  return `+${phone.replace(/\D/g, '')}`;
 }

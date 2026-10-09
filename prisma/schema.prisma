@@ -70,6 +70,7 @@ model User {
   name          String
   email         String  @unique
   phone         String? @unique
+  telegramId    String? @unique
   emailVerified Boolean @default(false)
   phoneVerified Boolean @default(false)
   credits       Int     @default(0)
@@ -119,8 +120,11 @@ model VerificationCode {
   id         String              @id @default(uuid(7))
   userId     String
   channel    VerificationChannel
-  target     String
+  /// Email address, or the verified phone once the Telegram contact arrives.
+  target     String?
   codeHash   String
+  /// Telegram user id that opened the deep link (phone channel).
+  externalId String?
   attempts   Int                 @default(0)
   expiresAt  DateTime
   consumedAt DateTime?
@@ -130,6 +134,8 @@ model VerificationCode {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, channel])
+  @@index([codeHash])
+  @@index([externalId])
   @@map("verification_codes")
 }
 
