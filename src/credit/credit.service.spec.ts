@@ -78,9 +78,11 @@ describe('CreditService', () => {
     it('fails with 402 when the balance is insufficient', async () => {
       tx.user.updateMany.mockResolvedValue({ count: 0 });
 
-      await expect(service.debit(tx as never, debit)).rejects.toMatchObject({
-        status: 402,
-      } satisfies Partial<HttpException>);
+      const error = await service
+        .debit(tx as never, debit)
+        .catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getStatus()).toBe(402);
       expect(tx.creditTransaction.create).not.toHaveBeenCalled();
     });
   });

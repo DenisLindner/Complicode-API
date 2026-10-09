@@ -23,19 +23,28 @@ export class JwtAuthGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
+    const request = context.switchToHttp().getRequest<Request>();
+    const [type, token] = request.headers.authorization?.split(' ') ?? [];
+    const hasToken = type === 'Bearer' && !!token;
+
     if (isPublic) {
+      // Public routes still identify the user when a valid token is sent.
+      if (hasToken) {
+        await this.authenticate(request, token).catch(() => undefined);
+      }
       return true;
     }
 
-    const request = context.switchToHttp().getRequest<Request>();
-    const [type, token] = request.headers.authorization?.split(' ') ?? [];
-    if (type !== 'Bearer' || !token) {
+    if (!hasToken) {
       throw new UnauthorizedException('Missing access token');
     }
 
+    await this.authenticate(request, token);
+    return true;
+  }
+
+  private async authenticate(request: Request, token: string) {
     const payload = await this.keycloak.verifyAccessToken(token);
     request.user = await this.userService.syncFromToken(payload);
-
-    return true;
   }
 }
