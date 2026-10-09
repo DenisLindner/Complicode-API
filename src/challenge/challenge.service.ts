@@ -21,11 +21,13 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import {
   AVOID_TITLES_LIMIT,
+  CHALLENGE_LIST_OMIT,
   CHALLENGE_SUMMARY_INCLUDE,
   GENERATION_COST,
   MAX_REGENERATIONS,
   STUCK_GENERATION_MS,
 } from './challenge.constants';
+import { renderChallengeMarkdown } from './challenge.markdown';
 import { GenerateChallengeDTO } from './dto/generate-challenge.dto';
 
 @Injectable()
@@ -201,6 +203,17 @@ export class ChallengeService implements OnApplicationBootstrap {
     return publicChallenge;
   }
 
+  /** The current version as a markdown document, with the same visibility rules. */
+  async renderMarkdown(id: string, viewer?: User) {
+    const challenge = await this.findById(id, viewer);
+
+    if (challenge.status !== ChallengeStatus.READY) {
+      throw new ConflictException('Challenge is not ready');
+    }
+
+    return renderChallengeMarkdown(challenge);
+  }
+
   async updateVisibility(user: User, id: string, isPublic: boolean) {
     const challenge = await this.findOwned(user.id, id);
 
@@ -253,25 +266,27 @@ export class ChallengeService implements OnApplicationBootstrap {
       where: { userId, frameworkId, title: { not: null } },
       orderBy: { createdAt: 'desc' },
       take: AVOID_TITLES_LIMIT,
-      select: { title: true },
+      select: { title: true, projectName: true },
     });
 
-    return challenges.map(({ title }) => title!);
+    return challenges.map(({ title, projectName }) =>
+      projectName ? `${title} (${projectName})` : title!,
+    );
   }
 
   private async saveVersion(
     challengeId: Challenge['id'],
     version: number,
-    { content, model }: ChallengeGenerationResult,
+    { challenge: generated, model }: ChallengeGenerationResult,
   ) {
     const [challenge] = await this.prisma.$transaction([
       this.prisma.challenge.update({
         where: { id: challengeId },
-        data: { ...content, status: ChallengeStatus.READY },
+        data: { ...generated, status: ChallengeStatus.READY },
         include: CHALLENGE_SUMMARY_INCLUDE,
       }),
       this.prisma.challengeVersion.create({
-        data: { challengeId, version, model, ...content },
+        data: { challengeId, version, model, ...generated },
       }),
     ]);
 
@@ -286,6 +301,7 @@ export class ChallengeService implements OnApplicationBootstrap {
       this.prisma.challenge.findMany({
         where,
         include: CHALLENGE_SUMMARY_INCLUDE,
+        omit: CHALLENGE_LIST_OMIT,
         orderBy: { createdAt: 'desc' },
         skip: pagination.skip,
         take: pagination.limit,

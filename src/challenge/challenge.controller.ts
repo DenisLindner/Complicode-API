@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   HttpCode,
   HttpStatus,
   Param,
@@ -11,7 +12,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiProduces, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
@@ -64,6 +65,17 @@ export class ChallengeController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return await this.service.findById(id, user);
+  }
+
+  @Public()
+  @Get('/:id/markdown')
+  @Header('Content-Type', 'text/markdown; charset=utf-8')
+  @ApiProduces('text/markdown')
+  async renderMarkdown(
+    @CurrentUser() user: User | undefined,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return await this.service.renderMarkdown(id, user);
   }
 
   @Patch('/:id/visibility')

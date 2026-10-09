@@ -1,5 +1,9 @@
 import { ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import {
+  GENERATED_CHALLENGE,
+  MODEL_ANSWER,
+} from '../../test/fixtures/generated-challenge';
 import { ChallengeLevel } from '../generated/prisma/client';
 import { GeminiService } from './gemini.service';
 
@@ -10,13 +14,6 @@ describe('GeminiService', () => {
     language: 'TypeScript',
     level: ChallengeLevel.JUNIOR,
     avoidTitles: [],
-  };
-  const content = {
-    title: 'Colmeia Conectada',
-    context: 'Contexto',
-    description: 'Desafio',
-    technologies: ['NestJS', 'PostgreSQL'],
-    deliverables: ['API', 'Testes', 'README'],
   };
   const settings: Record<string, string> = {
     GEMINI_API_KEY: 'key',
@@ -42,10 +39,10 @@ describe('GeminiService', () => {
   });
 
   it('uses the primary model when it answers', async () => {
-    generateContent.mockResolvedValue({ text: JSON.stringify(content) });
+    generateContent.mockResolvedValue({ text: MODEL_ANSWER });
 
     await expect(service.generateChallenge(input)).resolves.toEqual({
-      content,
+      challenge: GENERATED_CHALLENGE,
       model: 'primary',
     });
     expect(generateContent).toHaveBeenCalledTimes(1);
@@ -56,12 +53,12 @@ describe('GeminiService', () => {
       .mockRejectedValueOnce(new Error('503 high demand'))
       .mockResolvedValueOnce({ text: '{"title":""}' })
       .mockResolvedValueOnce({
-        text: JSON.stringify(content),
+        text: MODEL_ANSWER,
         modelVersion: 'fallback-b-001',
       });
 
     await expect(service.generateChallenge(input)).resolves.toEqual({
-      content,
+      challenge: GENERATED_CHALLENGE,
       model: 'fallback-b-001',
     });
     expect(

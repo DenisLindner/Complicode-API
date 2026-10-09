@@ -8,15 +8,16 @@ import { ConfigService } from '@nestjs/config';
 import {
   ChallengeGenerationInput,
   ChallengeGenerationResult,
-  GeneratedChallenge,
 } from './ai.types';
+import { parseGeneratedChallenge } from './challenge.parser';
 import {
   buildChallengePrompt,
   CHALLENGE_RESPONSE_SCHEMA,
   CHALLENGE_SYSTEM_INSTRUCTION,
 } from './prompts/challenge.prompt';
 
-const REQUEST_TIMEOUT_MS = 60_000;
+/** The full challenge document takes a while to write, especially on fallbacks. */
+const REQUEST_TIMEOUT_MS = 90_000;
 
 @Injectable()
 export class GeminiService {
@@ -76,28 +77,8 @@ export class GeminiService {
     });
 
     return {
-      content: this.parse(response.text),
+      challenge: parseGeneratedChallenge(response.text),
       model: response.modelVersion ?? model,
     };
-  }
-
-  private parse(text: string | undefined): GeneratedChallenge {
-    const data = JSON.parse(text ?? '') as Partial<GeneratedChallenge>;
-    const isText = (value: unknown) =>
-      typeof value === 'string' && value.trim().length > 0;
-    const isList = (value: unknown) =>
-      Array.isArray(value) && value.length > 0 && value.every(isText);
-
-    if (
-      !isText(data.title) ||
-      !isText(data.context) ||
-      !isText(data.description) ||
-      !isList(data.technologies) ||
-      !isList(data.deliverables)
-    ) {
-      throw new Error('Model response does not match the challenge layout');
-    }
-
-    return data as GeneratedChallenge;
   }
 }
