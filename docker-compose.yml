@@ -44,6 +44,14 @@ services:
     depends_on:
       - keycloak_postgres
 
+  mailpit:
+    container_name: complicode_mailpit
+    image: axllent/mailpit:v1.31
+    restart: always
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
 volumes:
   pg_data:
   keycloak_pg_data:

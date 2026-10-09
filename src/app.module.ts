@@ -8,6 +8,7 @@ import { CreditModule } from './credit/credit.module';
 import { envValidationSchema } from './config/env.validation';
 import { PrismaModule } from './prisma/prisma.module';
 import { UserModule } from './user/user.module';
+import { VerificationModule } from './verification/verification.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { UserModule } from './user/user.module';
     AuthModule,
     UserModule,
     CreditModule,
+    VerificationModule,
     ChallengeModule,
   ],
   controllers: [],
