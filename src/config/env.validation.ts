@@ -37,6 +37,9 @@ export const envValidationSchema = Joi.object({
   TELEGRAM_WEBHOOK_SECRET: requiredWhen('TELEGRAM_UPDATES_MODE', 'webhook'),
   GEMINI_API_KEY: Joi.string().required(),
   GEMINI_MODEL: Joi.string().default('gemini-flash-latest'),
+  GEMINI_FALLBACK_MODELS: Joi.string()
+    .allow('')
+    .default('gemini-3.5-flash,gemini-flash-lite-latest'),
   ABACATEPAY_API_URL: Joi.string()
     .uri()
     .default('https://api.abacatepay.com/v2'),

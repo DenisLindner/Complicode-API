@@ -77,11 +77,12 @@ Todas são validadas no boot (`src/config/env.validation.ts`). As principais:
 | `TELEGRAM_UPDATES_MODE` | `polling` (dev), `webhook` (produção) ou `disabled` |
 | `TELEGRAM_WEBHOOK_URL`, `TELEGRAM_WEBHOOK_SECRET` | Só no modo webhook |
 | `GEMINI_API_KEY`, `GEMINI_MODEL` | Chave do Google AI Studio e modelo (padrão `gemini-flash-latest`) |
+| `GEMINI_FALLBACK_MODELS` | Modelos tentados em ordem quando o principal falha ou está sobrecarregado |
 | `ABACATEPAY_*` | Chave da API, secret do webhook e ID do produto de créditos |
 
 ### Gemini
 
-Crie uma chave gratuita em https://aistudio.google.com/apikey. O plano gratuito tem limite de requisições por minuto e por dia, então a rota de geração tem rate limit próprio.
+Crie uma chave gratuita em https://aistudio.google.com/apikey. O plano gratuito tem limite de requisições por minuto e por dia, então a rota de geração tem rate limit próprio. Como os modelos gratuitos às vezes ficam sobrecarregados (erro 503), a API tenta os modelos de `GEMINI_FALLBACK_MODELS` antes de desistir e estornar o crédito.
 
 ### Email (Gmail SMTP, gratuito)
 
