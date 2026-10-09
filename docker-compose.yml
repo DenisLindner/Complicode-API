@@ -12,5 +12,38 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
 
+  keycloak_postgres:
+    container_name: complicode_keycloak_postgres
+    image: postgres:16
+    restart: always
+    environment:
+      - POSTGRES_USER=keycloak
+      - POSTGRES_PASSWORD=keycloak
+      - POSTGRES_DB=keycloak
+    volumes:
+      - keycloak_pg_data:/var/lib/postgresql/data
+
+  keycloak:
+    container_name: complicode_keycloak
+    image: quay.io/keycloak/keycloak:26.7.5
+    restart: always
+    command: start-dev --import-realm
+    ports:
+      - "8080:8080"
+    environment:
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://keycloak_postgres:5432/keycloak
+      - KC_DB_USERNAME=keycloak
+      - KC_DB_PASSWORD=keycloak
+      - KC_HOSTNAME=http://localhost:8080
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-complicode-dev-secret}
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import:ro
+    depends_on:
+      - keycloak_postgres
+
 volumes:
   pg_data:
+  keycloak_pg_data:
