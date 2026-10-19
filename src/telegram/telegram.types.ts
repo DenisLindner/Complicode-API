@@ -3,6 +3,8 @@ export interface TelegramUser {
   is_bot: boolean;
   first_name: string;
   username?: string;
+  /** IETF language tag of the user's Telegram app, e.g. "pt-br". */
+  language_code?: string;
 }
 
 export interface TelegramContact {

@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { ChallengeLevel } from '../generated/prisma/client';
+import { ChallengeLevel, Locale } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { LEVEL_LABELS } from './catalog.constants';
 
@@ -23,7 +23,7 @@ export class CatalogService {
   findLevels() {
     return Object.values(ChallengeLevel).map((value) => ({
       value,
-      label: LEVEL_LABELS[value],
+      label: LEVEL_LABELS[Locale.en][value],
     }));
   }
 

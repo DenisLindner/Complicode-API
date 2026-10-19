@@ -1,5 +1,5 @@
-import { IsEnum, IsUUID } from 'class-validator';
-import { ChallengeLevel } from '../../generated/prisma/client';
+import { IsEnum, IsOptional, IsUUID } from 'class-validator';
+import { ChallengeLevel, Locale } from '../../generated/prisma/client';
 
 export class GenerateChallengeDTO {
   @IsUUID()
@@ -10,4 +10,9 @@ export class GenerateChallengeDTO {
 
   @IsEnum(ChallengeLevel)
   level: ChallengeLevel;
+
+  /** Language of the document; defaults to the language of the user. */
+  @IsOptional()
+  @IsEnum(Locale)
+  locale?: Locale;
 }

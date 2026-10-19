@@ -84,6 +84,7 @@ export class ChallengeService implements OnApplicationBootstrap {
       dto.frameworkId,
     );
 
+    const locale = dto.locale ?? user.locale;
     const challenge = await this.prisma.$transaction(async (tx) => {
       const created = await tx.challenge.create({
         data: {
@@ -91,6 +92,7 @@ export class ChallengeService implements OnApplicationBootstrap {
           stackId: stack.id,
           frameworkId: framework.id,
           level: dto.level,
+          locale,
         },
       });
       await this.credit.debit(tx, {
@@ -110,6 +112,7 @@ export class ChallengeService implements OnApplicationBootstrap {
         framework: framework.name,
         language: framework.language,
         level: dto.level,
+        locale,
         avoidTitles: await this.findPreviousTitles(user.id, framework.id),
       });
     } catch (error) {
@@ -150,6 +153,7 @@ export class ChallengeService implements OnApplicationBootstrap {
         framework: challenge.framework.name,
         language: challenge.framework.language,
         level: challenge.level,
+        locale: challenge.locale,
         avoidTitles: await this.findPreviousTitles(
           user.id,
           challenge.frameworkId,

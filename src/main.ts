@@ -29,7 +29,7 @@ async function bootstrap() {
   if (config.get<string>('NODE_ENV') !== 'production') {
     const swaggerConfig = new DocumentBuilder()
       .setTitle('Complicode API')
-      .setDescription('Gerador de desafios de programação')
+      .setDescription('Programming challenge generator')
       .setVersion('1.0')
       .addBearerAuth()
       .addApiKey(

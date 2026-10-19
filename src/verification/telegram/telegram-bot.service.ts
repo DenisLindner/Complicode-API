@@ -13,20 +13,24 @@ import {
 } from '../../telegram/telegram.types';
 import { PhoneVerificationError } from '../phone-verification.error';
 import { VerificationService } from '../verification.service';
-import {
-  BOT_MESSAGES,
-  FAILURE_MESSAGES,
-  SHARE_CONTACT_BUTTON,
-} from './telegram-bot.messages';
+import { Locale, localeFromLanguageCode } from '../../i18n/locale';
+import { BOT_MESSAGES } from './telegram-bot.messages';
 
 const POLLING_TIMEOUT_SECONDS = 25;
 const POLLING_RETRY_MS = 5_000;
 
-const CONTACT_KEYBOARD: TelegramReplyMarkup = {
-  keyboard: [[{ text: SHARE_CONTACT_BUTTON, request_contact: true }]],
+const contactKeyboard = (locale: Locale): TelegramReplyMarkup => ({
+  keyboard: [
+    [
+      {
+        text: BOT_MESSAGES[locale].shareContactButton,
+        request_contact: true,
+      },
+    ],
+  ],
   resize_keyboard: true,
   one_time_keyboard: true,
-};
+});
 const REMOVE_KEYBOARD: TelegramReplyMarkup = { remove_keyboard: true };
 
 export type TelegramUpdatesMode = 'polling' | 'webhook' | 'disabled';
@@ -84,26 +88,33 @@ export class TelegramBotService
       return;
     }
 
+    const languageCode = message.from.language_code;
+    const locale = await this.verification
+      .resolveTelegramLocale(String(message.from.id), languageCode)
+      .catch(() => localeFromLanguageCode(languageCode));
+    const messages = BOT_MESSAGES[locale];
+
     try {
-      await this.handleMessage(message);
+      await this.handleMessage(message, locale);
     } catch (error) {
       if (error instanceof PhoneVerificationError) {
         const keyboard =
           error.reason === 'NOT_OWN_CONTACT'
-            ? CONTACT_KEYBOARD
+            ? contactKeyboard(locale)
             : REMOVE_KEYBOARD;
-        await this.reply(message, FAILURE_MESSAGES[error.reason], keyboard);
+        await this.reply(message, messages.failures[error.reason], keyboard);
         return;
       }
 
       this.logger.error(
         `Telegram update ${update.update_id} failed: ${(error as Error).message}`,
       );
-      await this.reply(message, BOT_MESSAGES.unexpected, REMOVE_KEYBOARD);
+      await this.reply(message, messages.unexpected, REMOVE_KEYBOARD);
     }
   }
 
-  private async handleMessage(message: TelegramMessage) {
+  private async handleMessage(message: TelegramMessage, locale: Locale) {
+    const messages = BOT_MESSAGES[locale];
     const telegramId = String(message.from!.id);
 
     if (message.contact) {
@@ -115,18 +126,26 @@ export class TelegramBotService
         },
       );
       const text = bonusGranted
-        ? `${BOT_MESSAGES.verified}\n${BOT_MESSAGES.bonus}`
-        : BOT_MESSAGES.verified;
+        ? `${messages.verified}\n${messages.bonus}`
+        : messages.verified;
       return this.reply(message, text, REMOVE_KEYBOARD);
     }
 
     const [command, token] = message.text?.trim().split(/\s+/) ?? [];
     if (command === '/start' && token) {
-      await this.verification.linkTelegram(token, telegramId);
-      return this.reply(message, BOT_MESSAGES.askContact, CONTACT_KEYBOARD);
+      // The language chosen on the website wins over the Telegram app's.
+      const { locale: userLocale } = await this.verification.linkTelegram(
+        token,
+        telegramId,
+      );
+      return this.reply(
+        message,
+        BOT_MESSAGES[userLocale].askContact,
+        contactKeyboard(userLocale),
+      );
     }
 
-    return this.reply(message, BOT_MESSAGES.help);
+    return this.reply(message, messages.help);
   }
 
   private async reply(

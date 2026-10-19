@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '../generated/prisma/client';
+import { Locale, Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { KeycloakAccessTokenPayload } from '../auth/keycloak/keycloak.types';
 
@@ -19,6 +19,10 @@ export class UserService {
     }
 
     return user;
+  }
+
+  async updateLocale(id: string, locale: Locale) {
+    return this.prisma.user.update({ where: { id }, data: { locale } });
   }
 
   async findByEmail(email: string) {

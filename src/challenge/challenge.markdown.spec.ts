@@ -1,11 +1,12 @@
 import { GENERATED_CHALLENGE } from '../../test/fixtures/generated-challenge';
-import { ChallengeLevel } from '../generated/prisma/client';
+import { ChallengeLevel, Locale } from '../generated/prisma/client';
 import { renderChallengeMarkdown } from './challenge.markdown';
 
 describe('renderChallengeMarkdown', () => {
   const challenge = {
     ...GENERATED_CHALLENGE,
     level: ChallengeLevel.JUNIOR,
+    locale: Locale.pt,
     stack: { name: 'Backend' },
     framework: { name: 'NestJS', language: 'TypeScript' },
   };
@@ -36,6 +37,34 @@ describe('renderChallengeMarkdown', () => {
     expect(markdown).toContain('```text\nsrc/\n├── auth/');
     expect(markdown.trimEnd().endsWith('Boa sorte!')).toBe(true);
   });
+
+  it.each([
+    [
+      Locale.en,
+      '# Technical Challenge: ',
+      '> **Industry:** Produtividade · **Level:** Junior · **Stack:** Backend with NestJS (TypeScript)',
+      '### 1. Functional Requirements',
+      '## Time to Complete',
+    ],
+    [
+      Locale.es,
+      '# Desafío Técnico: ',
+      '> **Sector:** Produtividade · **Nivel:** Junior · **Stack:** Backend con NestJS (TypeScript)',
+      '### 1. Requisitos Funcionales',
+      '## Plazo de Entrega',
+    ],
+  ])(
+    'renders the headings in the language of the challenge (%s)',
+    (locale, title, details, requirements, deadline) => {
+      const markdown = renderChallengeMarkdown({ ...challenge, locale });
+
+      expect(markdown).toContain(title);
+      expect(markdown).toContain(details);
+      expect(markdown).toContain(requirements);
+      expect(markdown).toContain(deadline);
+      expect(markdown).not.toContain('Desafio Técnico');
+    },
+  );
 
   it('leaves out the sections missing from challenges in the old layout', () => {
     const markdown = renderChallengeMarkdown({

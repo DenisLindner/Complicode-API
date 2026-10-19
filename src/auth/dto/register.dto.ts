@@ -1,12 +1,15 @@
 import { Transform } from 'class-transformer';
 import {
   IsEmail,
+  IsEnum,
+  IsOptional,
   IsNotEmpty,
   IsString,
   Matches,
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { Locale } from '../../generated/prisma/client';
 
 export class RegisterDTO {
   @IsString()
@@ -27,4 +30,8 @@ export class RegisterDTO {
       'password must contain at least one uppercase letter, one lowercase letter and one number',
   })
   password: string;
+
+  @IsOptional()
+  @IsEnum(Locale)
+  locale?: Locale;
 }

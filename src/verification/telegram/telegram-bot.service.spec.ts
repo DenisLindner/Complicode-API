@@ -1,9 +1,10 @@
 import { ConfigService } from '@nestjs/config';
+import { Locale } from '../../i18n/locale';
 import { TelegramService } from '../../telegram/telegram.service';
 import { TelegramUpdate } from '../../telegram/telegram.types';
 import { PhoneVerificationError } from '../phone-verification.error';
 import { VerificationService } from '../verification.service';
-import { BOT_MESSAGES, FAILURE_MESSAGES } from './telegram-bot.messages';
+import { BOT_MESSAGES } from './telegram-bot.messages';
 import { TelegramBotService } from './telegram-bot.service';
 
 describe('TelegramBotService', () => {
@@ -12,6 +13,7 @@ describe('TelegramBotService', () => {
 
   let telegram: { sendMessage: jest.Mock };
   let verification: {
+    resolveTelegramLocale: jest.Mock;
     linkTelegram: jest.Mock;
     confirmTelegramContact: jest.Mock;
   };
@@ -25,7 +27,8 @@ describe('TelegramBotService', () => {
   beforeEach(() => {
     telegram = { sendMessage: jest.fn().mockResolvedValue(undefined) };
     verification = {
-      linkTelegram: jest.fn(),
+      resolveTelegramLocale: jest.fn().mockResolvedValue(Locale.pt),
+      linkTelegram: jest.fn().mockResolvedValue({ locale: Locale.pt }),
       confirmTelegramContact: jest
         .fn()
         .mockResolvedValue({ bonusGranted: true }),
@@ -43,10 +46,52 @@ describe('TelegramBotService', () => {
     expect(verification.linkTelegram).toHaveBeenCalledWith('abc123', '42');
     expect(telegram.sendMessage).toHaveBeenCalledWith(
       42,
-      BOT_MESSAGES.askContact,
+      BOT_MESSAGES.pt.askContact,
       expect.objectContaining({
         keyboard: [[expect.objectContaining({ request_contact: true })]],
       }),
+    );
+  });
+
+  it('answers in the language chosen on the website', async () => {
+    verification.resolveTelegramLocale.mockResolvedValue(Locale.en);
+    verification.linkTelegram.mockResolvedValue({ locale: Locale.es });
+
+    await bot.handleUpdate(update({ text: '/start abc123' }));
+
+    expect(telegram.sendMessage).toHaveBeenCalledWith(
+      42,
+      BOT_MESSAGES.es.askContact,
+      expect.objectContaining({
+        keyboard: [
+          [
+            {
+              text: BOT_MESSAGES.es.shareContactButton,
+              request_contact: true,
+            },
+          ],
+        ],
+      }),
+    );
+  });
+
+  it('falls back to the language of the Telegram app', async () => {
+    verification.resolveTelegramLocale.mockRejectedValue(new Error('down'));
+
+    await bot.handleUpdate({
+      update_id: 3,
+      message: {
+        message_id: 3,
+        from: { ...from, language_code: 'es-AR' },
+        chat,
+        text: 'hola',
+      },
+    });
+
+    expect(telegram.sendMessage).toHaveBeenCalledWith(
+      42,
+      BOT_MESSAGES.es.help,
+      undefined,
     );
   });
 
@@ -67,7 +112,7 @@ describe('TelegramBotService', () => {
     });
     expect(telegram.sendMessage).toHaveBeenCalledWith(
       42,
-      `${BOT_MESSAGES.verified}\n${BOT_MESSAGES.bonus}`,
+      `${BOT_MESSAGES.pt.verified}\n${BOT_MESSAGES.pt.bonus}`,
       { remove_keyboard: true },
     );
   });
@@ -81,7 +126,7 @@ describe('TelegramBotService', () => {
 
     expect(telegram.sendMessage).toHaveBeenCalledWith(
       42,
-      FAILURE_MESSAGES.CODE_NOT_FOUND,
+      BOT_MESSAGES.pt.failures.CODE_NOT_FOUND,
       { remove_keyboard: true },
     );
   });
@@ -94,7 +139,7 @@ describe('TelegramBotService', () => {
     ).resolves.toBeUndefined();
     expect(telegram.sendMessage).toHaveBeenCalledWith(
       42,
-      BOT_MESSAGES.unexpected,
+      BOT_MESSAGES.pt.unexpected,
       { remove_keyboard: true },
     );
   });
@@ -114,7 +159,7 @@ describe('TelegramBotService', () => {
     expect(telegram.sendMessage).toHaveBeenCalledTimes(1);
     expect(telegram.sendMessage).toHaveBeenCalledWith(
       42,
-      BOT_MESSAGES.help,
+      BOT_MESSAGES.pt.help,
       undefined,
     );
   });

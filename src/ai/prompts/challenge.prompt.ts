@@ -1,164 +1,179 @@
-import { LEVEL_LABELS } from '../../catalog/catalog.constants';
-import { ChallengeLevel } from '../../generated/prisma/client';
+import { ChallengeLevel, Locale } from '../../generated/prisma/client';
+import { LANGUAGE_NAMES } from '../../i18n/locale';
 import { ChallengeGenerationInput } from '../ai.types';
 
-export const CHALLENGE_SYSTEM_INSTRUCTION = `Você é um tech lead sênior que prepara desafios técnicos realistas, como os usados em processos seletivos e no onboarding de empresas de tecnologia.
-Cada desafio simula um problema que empresas enfrentam hoje no dia a dia (operação, finanças, atendimento, logística, compliance, produtividade, dados, IA aplicada etc.), com regras de negócio concretas, perfis de usuário, restrições e requisitos não funcionais de um projeto de verdade.
-Evite projetos de brinquedo e clichês de tutorial: lista de tarefas, clone de rede social, blog, calculadora, app de clima, CRUD de filmes ou de livros.
-Seja específico: use números, limites, regras, códigos de status HTTP, nomes de entidades e exemplos de dados quando ajudarem. Nada de requisitos vagos como "o sistema deve ser rápido".
-O desafio é individual, precisa ser realizável no prazo com a stack informada e adequado ao nível de senioridade pedido.
-Escreva em português do Brasil, em tom de briefing técnico direto, falando com o desenvolvedor ("você"). Siga exatamente o formato JSON solicitado.`;
+/**
+ * The prompts are written in English, the base language, and ask the model to
+ * write the challenge in the language of the challenge (`LANGUAGE_NAMES`).
+ */
+export function buildSystemInstruction(locale: Locale) {
+  return `You are a senior tech lead who prepares realistic technical challenges, like the ones used in hiring processes and in the onboarding of technology companies.
+Each challenge simulates a problem that companies face today in their day-to-day work (operations, finance, customer support, logistics, compliance, productivity, data, applied AI, etc.), with concrete business rules, user profiles, constraints and the non-functional requirements of a real project.
+Avoid toy projects and tutorial clichés: to-do lists, social network clones, blogs, calculators, weather apps, movie or book CRUDs.
+Be specific: use numbers, limits, rules, HTTP status codes, entity names and data examples whenever they help. No vague requirements such as "the system must be fast".
+The challenge is individual, must be doable within the deadline with the given stack and must fit the requested seniority level.
+Write everything in ${LANGUAGE_NAMES[locale]}, as a direct technical briefing, addressing the developer as "you". Keep the names of technologies, products and code identifiers as they are. Follow exactly the requested JSON format.`;
+}
+
+const LEVEL_NAMES: Record<ChallengeLevel, string> = {
+  [ChallengeLevel.INTERN]: 'Intern',
+  [ChallengeLevel.JUNIOR]: 'Junior',
+  [ChallengeLevel.MID]: 'Mid-level',
+  [ChallengeLevel.SENIOR]: 'Senior',
+};
 
 const LEVEL_GUIDELINES: Record<ChallengeLevel, string> = {
   [ChallengeLevel.INTERN]:
-    'prazo de 3 a 5 dias e 3 a 4 requisitos funcionais. Foco em fundamentos da linguagem e do framework, regras de negócio simples, validação de entrada e README. Sem infraestrutura complexa.',
+    'a deadline of 3 to 5 days and 3 to 4 functional requirements. Focus on the fundamentals of the language and the framework, simple business rules, input validation and a README. No complex infrastructure.',
   [ChallengeLevel.JUNIOR]:
-    'prazo de 1 a 2 semanas e 4 a 6 requisitos funcionais. Regras de negócio reais, autenticação, persistência, tratamento global de erros, integração com uma API externa e testes unitários básicos.',
+    'a deadline of 1 to 2 weeks and 4 to 6 functional requirements. Real business rules, authentication, persistence, global error handling, an integration with an external API and basic unit tests.',
   [ChallengeLevel.MID]:
-    'prazo de 2 a 3 semanas e 5 a 7 requisitos funcionais. Integrações externas resilientes, processamento assíncrono ou filas, cache, controle de concorrência, testes automatizados e decisões de arquitetura justificadas.',
+    'a deadline of 2 to 3 weeks and 5 to 7 functional requirements. Resilient external integrations, asynchronous processing or queues, caching, concurrency control, automated tests and justified architecture decisions.',
   [ChallengeLevel.SENIOR]:
-    'prazo de 3 a 4 semanas e 6 a 8 requisitos funcionais. Requisitos não funcionais exigentes (escala, disponibilidade, idempotência, observabilidade e segurança), arquitetura com trade-offs documentados em ADRs, estratégia de testes e de deploy.',
+    'a deadline of 3 to 4 weeks and 6 to 8 functional requirements. Demanding non-functional requirements (scale, availability, idempotency, observability and security), an architecture with trade-offs documented in ADRs, a testing strategy and a deployment strategy.',
 };
 
 /** Real industry problems used as a starting point, so challenges vary. */
 export const INDUSTRY_SCENARIOS = [
   {
-    industry: 'Serviços financeiros',
-    problem: 'conciliação automática entre extratos bancários e pagamentos',
+    industry: 'Financial services',
+    problem: 'automatic reconciliation between bank statements and payments',
   },
   {
-    industry: 'Varejo',
-    problem: 'controle de estoque multicanal entre lojas físicas e e-commerce',
+    industry: 'Retail',
+    problem:
+      'omnichannel inventory control across physical stores and e-commerce',
   },
   {
-    industry: 'Logística',
-    problem: 'roteirização e rastreamento de entregas de última milha',
+    industry: 'Logistics',
+    problem: 'route planning and tracking of last-mile deliveries',
   },
   {
-    industry: 'Saúde',
-    problem: 'agendamento de consultas com lembretes para reduzir faltas',
+    industry: 'Healthcare',
+    problem: 'appointment scheduling with reminders to reduce no-shows',
   },
   {
-    industry: 'Recursos humanos',
-    problem: 'onboarding de colaboradores com checklist e coleta de documentos',
+    industry: 'Human resources',
+    problem: 'employee onboarding with a checklist and document collection',
   },
   {
-    industry: 'Jurídico',
-    problem: 'controle de prazos processuais e alertas para advogados',
+    industry: 'Legal',
+    problem: 'tracking of procedural deadlines with alerts for lawyers',
   },
   {
-    industry: 'Seguros',
-    problem: 'abertura, triagem e acompanhamento de sinistros',
+    industry: 'Insurance',
+    problem: 'opening, triage and follow-up of insurance claims',
   },
   {
-    industry: 'Atendimento ao cliente',
-    problem: 'central de tickets com SLA, prioridade e escalonamento',
+    industry: 'Customer support',
+    problem: 'ticket desk with SLAs, priorities and escalation',
   },
   {
     industry: 'Marketing',
-    problem: 'motor de cupons e campanhas promocionais com regras antifraude',
+    problem: 'coupon and promotional campaign engine with anti-fraud rules',
   },
   {
-    industry: 'Contabilidade e fiscal',
+    industry: 'Accounting and tax',
+    problem: 'import and validation of electronic invoices (XML files)',
+  },
+  {
+    industry: 'Manufacturing',
+    problem: 'preventive maintenance of machines based on sensor readings',
+  },
+  {
+    industry: 'Agribusiness',
+    problem: 'batch traceability from harvest to the final customer',
+  },
+  {
+    industry: 'Corporate procurement',
+    problem: 'approval workflow for purchase requests and supplier quotes',
+  },
+  {
+    industry: 'Corporate finance',
+    problem: 'expense reimbursement with receipts and approval limits',
+  },
+  {
+    industry: 'Information security',
     problem:
-      'importação e validação de notas fiscais eletrônicas (XML da NF-e)',
+      'access management, audit trail and data protection law compliance',
   },
   {
-    industry: 'Indústria',
+    industry: 'Productivity',
     problem:
-      'manutenção preventiva de máquinas a partir de leituras de sensores',
+      'AI-generated summaries and tasks extracted from meeting transcripts',
   },
   {
-    industry: 'Agronegócio',
-    problem: 'rastreabilidade de lotes da colheita até o cliente final',
+    industry: 'B2B SaaS',
+    problem: 'recurring billing, plans and subscription management',
   },
   {
-    industry: 'Compras corporativas',
-    problem: 'fluxo de aprovação de requisições e cotações com fornecedores',
-  },
-  {
-    industry: 'Financeiro corporativo',
-    problem: 'reembolso de despesas com comprovantes e alçadas de aprovação',
-  },
-  {
-    industry: 'Segurança da informação',
-    problem: 'gestão de acessos, trilha de auditoria e requisitos da LGPD',
-  },
-  {
-    industry: 'Produtividade',
-    problem: 'resumos e tarefas extraídos de transcrições de reuniões com IA',
-  },
-  {
-    industry: 'SaaS B2B',
-    problem: 'cobrança recorrente, planos e gestão de assinaturas',
-  },
-  {
-    industry: 'Mercado imobiliário',
-    problem: 'contratos de locação com reajuste por índice e repasses',
+    industry: 'Real estate',
+    problem: 'lease contracts with index-based adjustments and payouts',
   },
   {
     industry: 'Food service',
-    problem: 'painel de pedidos da cozinha (KDS) integrado a vários canais',
+    problem:
+      'kitchen display system (KDS) integrated with several order channels',
   },
   {
-    industry: 'Mobilidade',
-    problem: 'gestão de frota com telemetria e alertas de manutenção',
+    industry: 'Mobility',
+    problem: 'fleet management with telemetry and maintenance alerts',
   },
   {
-    industry: 'Engenharia de plataforma',
-    problem: 'feature flags com rollout gradual por percentual e segmento',
+    industry: 'Platform engineering',
+    problem: 'feature flags with gradual rollout by percentage and segment',
   },
   {
-    industry: 'Observabilidade',
-    problem: 'agregação de logs, alertas e gestão de incidentes de produção',
+    industry: 'Observability',
+    problem: 'log aggregation, alerting and production incident management',
   },
   {
     industry: 'E-commerce',
-    problem: 'recuperação de carrinhos abandonados e recomendação de produtos',
+    problem: 'abandoned cart recovery and product recommendations',
   },
   {
-    industry: 'Hotelaria',
-    problem: 'reservas com disponibilidade em tempo real e tarifas dinâmicas',
+    industry: 'Hospitality',
+    problem: 'reservations with real-time availability and dynamic rates',
   },
   {
-    industry: 'Eventos',
-    problem: 'venda de ingressos com alta concorrência e fila virtual',
+    industry: 'Events',
+    problem: 'ticket sales under heavy concurrency with a virtual queue',
   },
   {
-    industry: 'Crédito',
-    problem: 'análise de crédito com políticas de regras configuráveis',
+    industry: 'Lending',
+    problem: 'credit analysis with configurable policy rules',
   },
   {
-    industry: 'Recrutamento',
-    problem: 'triagem de candidatos com IA e pipeline de vagas (ATS)',
+    industry: 'Recruiting',
+    problem: 'AI-assisted candidate screening and a job pipeline (ATS)',
   },
   {
     industry: 'Supply chain',
-    problem: 'portal de homologação e avaliação de fornecedores',
+    problem: 'supplier onboarding and evaluation portal',
   },
   {
-    industry: 'Dados e BI',
-    problem: 'pipeline de dados de vendas com dashboard de KPIs',
+    industry: 'Data and BI',
+    problem: 'sales data pipeline with a KPI dashboard',
   },
   {
-    industry: 'Cobrança',
-    problem: 'régua de cobrança automatizada por email e mensagens',
+    industry: 'Collections',
+    problem: 'automated dunning flow by email and messaging',
   },
   {
-    industry: 'Setor público',
-    problem: 'protocolo e acompanhamento de solicitações de cidadãos',
+    industry: 'Public sector',
+    problem: 'filing and tracking of citizen requests',
   },
   {
     industry: 'Facilities',
-    problem: 'reserva de salas e estações de trabalho em escritório híbrido',
+    problem: 'room and desk booking in a hybrid office',
   },
   {
-    industry: 'Educação corporativa',
-    problem: 'trilhas de treinamento obrigatório e emissão de certificados',
+    industry: 'Corporate education',
+    problem: 'mandatory training paths and certificate issuing',
   },
   {
-    industry: 'Telecomunicações',
-    problem: 'autoatendimento de clientes e agendamento de visitas técnicas',
+    industry: 'Telecommunications',
+    problem: 'customer self-service and technical visit scheduling',
   },
 ];
 
@@ -169,33 +184,34 @@ export function buildChallengePrompt(
   const scenario =
     INDUSTRY_SCENARIOS[Math.floor(random() * INDUSTRY_SCENARIOS.length)];
   const avoid = input.avoidTitles.length
-    ? `\nNão repita nem crie variações destes desafios que o usuário já recebeu:\n${input.avoidTitles.map((title) => `- ${title}`).join('\n')}\n`
+    ? `\nDo not repeat or create variations of these challenges the user has already received:\n${input.avoidTitles.map((title) => `- ${title}`).join('\n')}\n`
     : '';
 
-  return `Crie um desafio técnico com as seguintes características:
-- Área (stack): ${input.stack}
-- Framework principal: ${input.framework} (${input.language})
-- Nível: ${LEVEL_LABELS[input.level]}, ${LEVEL_GUIDELINES[input.level]}
+  return `Create a technical challenge with the following characteristics:
+- Area (stack): ${input.stack}
+- Main framework: ${input.framework} (${input.language})
+- Level: ${LEVEL_NAMES[input.level]}, ${LEVEL_GUIDELINES[input.level]}
+- Language of the document: ${LANGUAGE_NAMES[input.locale]}. Write every text field in this language, including the industry.
 
-Ponto de partida: setor de ${scenario.industry}, problema de ${scenario.problem}. Se não combinar com a stack, escolha outro problema real do mesmo setor.
-O foco é a área ${input.stack} com ${input.framework}. Outras camadas (banco de dados, filas, ferramentas, APIs externas) entram como apoio; uma camada fora da área escolhida, quando aparecer, deve ser opcional ou simulada (ex.: API mockada).
-Adapte as expectativas do nível à área escolhida.
+Starting point: the ${scenario.industry} industry, the problem of ${scenario.problem}. If it does not fit the stack, choose another real problem from the same industry.
+The focus is the ${input.stack} area with ${input.framework}. Other layers (database, queues, tooling, external APIs) are supporting pieces; a layer outside the chosen area, when it appears, must be optional or simulated (e.g. a mocked API).
+Adapt the expectations of the level to the chosen area.
 ${avoid}
-Formato de cada campo (use **negrito** e \`código\` quando ajudar, sem títulos markdown):
-- title: o que é o sistema, ex.: "Sistema de Gestão de Insights e Resumos de Reuniões".
-- projectName: nome de produto curto e profissional, ex.: "MeetingInsight AI".
-- industry: setor da empresa.
-- summary: uma frase que resume o desafio.
-- context: Contexto, 2 a 3 parágrafos. O primeiro descreve a dor real da empresa e o que a plataforma deve fazer; o seguinte, o valor para o negócio e o foco técnico do desafio.
-- functionalRequirements: Requisitos funcionais. title curto, description com a regra e details com sub-itens, limites e exemplos (pode ficar vazio).
-- nonFunctionalRequirements: Requisitos não funcionais (segurança, arquitetura, dados, documentação, desempenho etc.), no mesmo formato.
-- technologies: O que usar, agrupado por camada (ex.: "Backend", "Banco de Dados", "Ferramentas de IA"). A primeira camada começa por ${input.framework}. Cada item tem name e purpose (para que serve no projeto).
-- deliverables: Entregas verificáveis (repositório, README, testes, coleção de requisições, diagrama etc.).
-- deadline: Tempo para conclusão, ex.: "1 semana (7 dias corridos)".
-- implementationGuide: Guia de implementação com 3 a 6 seções, como modelagem de dados (entidades e campos), a integração principal (com exemplo de prompt, payload ou contrato quando fizer sentido), segurança, tratamento de erros e boas práticas. description explica a seção e items traz dicas práticas.
-- evaluationCriteria: O que será avaliado pelos revisores sêniores (qualidade de código, segurança, resiliência, testes, uso do Git etc.).
-- folderStructure: estrutura de pastas sugerida em árvore de texto, com um comentário curto por pasta, no padrão de ${input.framework}.
-- closingNote: frase final de incentivo, no tom de um tech lead.`;
+Format of each field (use **bold** and \`code\` when it helps, no markdown headings):
+- title: what the system is, e.g. "Meeting Insights and Summaries Management System".
+- projectName: a short, professional product name, e.g. "MeetingInsight AI".
+- industry: the industry of the company.
+- summary: one sentence that sums up the challenge.
+- context: Context, 2 to 3 paragraphs. The first describes the company's real pain and what the platform must do; the next ones, the business value and the technical focus of the challenge.
+- functionalRequirements: Functional requirements. A short title, a description with the rule and details with sub-items, limits and examples (may be empty).
+- nonFunctionalRequirements: Non-functional requirements (security, architecture, data, documentation, performance, etc.), in the same format.
+- technologies: What to use, grouped by layer (e.g. "Backend", "Database", "AI tools"). The first layer starts with ${input.framework}. Each item has a name and a purpose (what it is for in the project).
+- deliverables: Verifiable deliverables (repository, README, tests, request collection, diagram, etc.).
+- deadline: Time to complete, e.g. "1 week (7 calendar days)".
+- implementationGuide: Implementation guide with 3 to 6 sections, such as data modeling (entities and fields), the main integration (with an example prompt, payload or contract when it makes sense), security, error handling and good practices. description explains the section and items has practical tips.
+- evaluationCriteria: What the senior reviewers will evaluate (code quality, security, resilience, tests, Git usage, etc.).
+- folderStructure: suggested folder structure as a text tree, with a short comment per folder, following the ${input.framework} conventions.
+- closingNote: a closing words of encouragement, in the tone of a tech lead.`;
 }
 
 // Gemini rejects maxItems in this schema, so the item counts are set in the prompt.
@@ -213,9 +229,9 @@ const requirementList = (description: string, minItems: number) => ({
   items: {
     type: 'object',
     properties: {
-      title: textField('Nome curto do requisito'),
-      description: textField('Regra ou comportamento esperado'),
-      details: textList('Sub-itens, limites e exemplos', 0),
+      title: textField('Short name of the requirement'),
+      description: textField('Expected rule or behavior'),
+      details: textList('Sub-items, limits and examples', 0),
     },
     required: ['title', 'description', 'details'],
     propertyOrdering: ['title', 'description', 'details'],
@@ -228,8 +244,8 @@ const titledList = (description: string) => ({
   items: {
     type: 'object',
     properties: {
-      title: textField('Título'),
-      description: textField('Descrição'),
+      title: textField('Title'),
+      description: textField('Description'),
     },
     required: ['title', 'description'],
     propertyOrdering: ['title', 'description'],
@@ -256,29 +272,32 @@ const CHALLENGE_FIELDS = [
 export const CHALLENGE_RESPONSE_SCHEMA = {
   type: 'object',
   properties: {
-    title: textField('O que é o sistema'),
-    projectName: textField('Nome do produto'),
-    industry: textField('Setor da empresa'),
-    summary: textField('Resumo em uma frase'),
-    context: textList('Contexto, um parágrafo por item', 2),
-    functionalRequirements: requirementList('Requisitos funcionais', 3),
-    nonFunctionalRequirements: requirementList('Requisitos não funcionais', 3),
+    title: textField('What the system is'),
+    projectName: textField('Product name'),
+    industry: textField('Industry of the company'),
+    summary: textField('One-sentence summary'),
+    context: textList('Context, one paragraph per item', 2),
+    functionalRequirements: requirementList('Functional requirements', 3),
+    nonFunctionalRequirements: requirementList(
+      'Non-functional requirements',
+      3,
+    ),
     technologies: {
       type: 'array',
       minItems: 2,
-      description: 'O que usar, agrupado por camada',
+      description: 'What to use, grouped by layer',
       items: {
         type: 'object',
         properties: {
-          category: textField('Camada da solução'),
+          category: textField('Layer of the solution'),
           items: {
             type: 'array',
             minItems: 1,
             items: {
               type: 'object',
               properties: {
-                name: textField('Tecnologia'),
-                purpose: textField('Para que serve no projeto'),
+                name: textField('Technology'),
+                purpose: textField('What it is for in the project'),
               },
               required: ['name', 'purpose'],
               propertyOrdering: ['name', 'purpose'],
@@ -289,26 +308,26 @@ export const CHALLENGE_RESPONSE_SCHEMA = {
         propertyOrdering: ['category', 'items'],
       },
     },
-    deliverables: textList('Entregas verificáveis', 3),
-    deadline: textField('Tempo para conclusão'),
+    deliverables: textList('Verifiable deliverables', 3),
+    deadline: textField('Time to complete'),
     implementationGuide: {
       type: 'array',
       minItems: 3,
-      description: 'Guia de implementação',
+      description: 'Implementation guide',
       items: {
         type: 'object',
         properties: {
-          title: textField('Título da seção'),
-          description: textField('Explicação da seção'),
-          items: textList('Dicas práticas', 1),
+          title: textField('Title of the section'),
+          description: textField('Explanation of the section'),
+          items: textList('Practical tips', 1),
         },
         required: ['title', 'description', 'items'],
         propertyOrdering: ['title', 'description', 'items'],
       },
     },
-    evaluationCriteria: titledList('O que será avaliado'),
-    folderStructure: textField('Estrutura de pastas em árvore de texto'),
-    closingNote: textField('Mensagem final'),
+    evaluationCriteria: titledList('What will be evaluated'),
+    folderStructure: textField('Folder structure as a text tree'),
+    closingNote: textField('Closing message'),
   },
   required: CHALLENGE_FIELDS,
   propertyOrdering: CHALLENGE_FIELDS,
