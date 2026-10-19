@@ -14,7 +14,6 @@ datasource db {
 enum ChallengeStatus {
   GENERATING
   READY
-  FAILED
 }
 
 model Challenge {
