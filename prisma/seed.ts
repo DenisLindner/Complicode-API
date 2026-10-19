@@ -11,7 +11,7 @@ const stacks = [
   { slug: 'frontend', name: 'Frontend' },
   { slug: 'fullstack', name: 'Fullstack' },
   { slug: 'mobile', name: 'Mobile' },
-  { slug: 'data', name: 'Dados & IA' },
+  { slug: 'data', name: 'Data & AI' },
 ];
 
 const frameworks = [

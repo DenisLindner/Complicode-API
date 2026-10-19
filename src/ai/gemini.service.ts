@@ -12,8 +12,8 @@ import {
 import { parseGeneratedChallenge } from './challenge.parser';
 import {
   buildChallengePrompt,
+  buildSystemInstruction,
   CHALLENGE_RESPONSE_SCHEMA,
-  CHALLENGE_SYSTEM_INSTRUCTION,
 } from './prompts/challenge.prompt';
 
 /** The full challenge document takes a while to write, especially on fallbacks. */
@@ -44,10 +44,11 @@ export class GeminiService {
     input: ChallengeGenerationInput,
   ): Promise<ChallengeGenerationResult> {
     const contents = buildChallengePrompt(input);
+    const systemInstruction = buildSystemInstruction(input.locale);
 
     for (const model of this.models) {
       try {
-        return await this.generateWith(model, contents);
+        return await this.generateWith(model, contents, systemInstruction);
       } catch (error) {
         this.logger.warn(
           `Challenge generation with ${model} failed: ${(error as Error).message}`,
@@ -64,12 +65,13 @@ export class GeminiService {
   private async generateWith(
     model: string,
     contents: string,
+    systemInstruction: string,
   ): Promise<ChallengeGenerationResult> {
     const response = await this.client.models.generateContent({
       model,
       contents,
       config: {
-        systemInstruction: CHALLENGE_SYSTEM_INSTRUCTION,
+        systemInstruction,
         temperature: 1,
         responseMimeType: 'application/json',
         responseJsonSchema: CHALLENGE_RESPONSE_SCHEMA,

@@ -4,7 +4,7 @@ import {
   GENERATED_CHALLENGE,
   MODEL_ANSWER,
 } from '../../test/fixtures/generated-challenge';
-import { ChallengeLevel } from '../generated/prisma/client';
+import { ChallengeLevel, Locale } from '../generated/prisma/client';
 import { GeminiService } from './gemini.service';
 
 describe('GeminiService', () => {
@@ -13,6 +13,7 @@ describe('GeminiService', () => {
     framework: 'NestJS',
     language: 'TypeScript',
     level: ChallengeLevel.JUNIOR,
+    locale: Locale.pt,
     avoidTitles: [],
   };
   const settings: Record<string, string> = {

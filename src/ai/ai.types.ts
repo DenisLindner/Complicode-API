@@ -1,10 +1,12 @@
-import { ChallengeLevel } from '../generated/prisma/client';
+import { ChallengeLevel, Locale } from '../generated/prisma/client';
 
 export interface ChallengeGenerationInput {
   stack: string;
   framework: string;
   language: string;
   level: ChallengeLevel;
+  /** Language the document is written in. */
+  locale: Locale;
   /** Titles already generated for the user, so the model avoids repeating them. */
   avoidTitles: string[];
 }
@@ -19,7 +21,7 @@ export type ChallengeRequirement = {
 };
 
 export type ChallengeTechnologyGroup = {
-  /** Layer of the solution, e.g. Backend, Banco de Dados, Ferramentas. */
+  /** Layer of the solution, e.g. Backend, Database, Tooling. */
   category: string;
   items: { name: string; purpose: string }[];
 };
@@ -37,14 +39,14 @@ export type ChallengeEvaluationCriterion = {
 
 /** Sections of the challenge document, stored as JSON. */
 export type ChallengeContent = {
-  /** Contexto, one paragraph per item. */
+  /** Context, one paragraph per item. */
   context: string[];
   functionalRequirements: ChallengeRequirement[];
   nonFunctionalRequirements: ChallengeRequirement[];
-  /** O que usar, grouped by layer. */
+  /** What to use, grouped by layer. */
   technologies: ChallengeTechnologyGroup[];
   deliverables: string[];
-  /** Tempo para conclusão, e.g. "1 semana (7 dias corridos)". */
+  /** Time to complete, e.g. "1 week (7 calendar days)". */
   deadline: string;
   implementationGuide: ChallengeGuideSection[];
   evaluationCriteria: ChallengeEvaluationCriterion[];
@@ -54,7 +56,7 @@ export type ChallengeContent = {
 };
 
 export type GeneratedChallenge = {
-  /** What the system is, e.g. "Sistema de Gestão de Resumos de Reuniões". */
+  /** What the system is, e.g. "Meeting Summaries Management System". */
   title: string;
   /** Product name, e.g. "MeetingInsight AI". */
   projectName: string;

@@ -11,6 +11,13 @@ datasource db {
   provider = "postgresql"
 }
 
+/// Interface and content language. English is the base language.
+enum Locale {
+  en
+  pt
+  es
+}
+
 enum ChallengeStatus {
   GENERATING
   READY
@@ -23,6 +30,8 @@ model Challenge {
   frameworkId       String
   level             ChallengeLevel
   status            ChallengeStatus @default(GENERATING)
+  /// Language of the generated document; regenerations keep it.
+  locale            Locale          @default(en)
   title             String?
   projectName       String?
   industry          String?
@@ -74,6 +83,8 @@ model User {
   emailVerified Boolean @default(false)
   phoneVerified Boolean @default(false)
   credits       Int     @default(0)
+  /// Language of the emails and bot messages, and the default for new challenges.
+  locale        Locale  @default(en)
 
   creditTransactions CreditTransaction[]
   verificationCodes  VerificationCode[]

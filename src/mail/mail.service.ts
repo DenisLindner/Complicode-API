@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import nodemailer, { Transporter } from 'nodemailer';
+import { DEFAULT_LOCALE, Locale } from '../i18n/locale';
+import { CODE_TTL_MS } from '../verification/verification.constants';
+import { VERIFICATION_MAIL } from './mail.messages';
 
 @Injectable()
 export class MailService {
@@ -21,17 +24,29 @@ export class MailService {
     });
   }
 
-  async sendVerificationCode(to: string, name: string, code: string) {
+  async sendVerificationCode(
+    to: string,
+    name: string,
+    code: string,
+    locale: Locale = DEFAULT_LOCALE,
+  ) {
+    const mail = VERIFICATION_MAIL[locale];
+    const minutes = CODE_TTL_MS / 60_000;
+
     await this.transporter.sendMail({
       from: this.from,
       to,
-      subject: `${code} é o seu código de verificação do Complicode`,
-      text: `Olá, ${name}!\n\nSeu código de verificação é ${code}. Ele expira em 10 minutos.\n\nSe você não solicitou este código, ignore este email.`,
-      html: `<p>Olá, ${this.escape(name)}!</p>
-<p>Seu código de verificação é:</p>
+      subject: mail.subject(code),
+      text: `${mail.greeting(name)}
+
+${mail.codeIntro} ${code}. ${mail.expires(minutes)}
+
+${mail.ignore}`,
+      html: `<p>${mail.greeting(this.escape(name))}</p>
+<p>${mail.codeIntro}</p>
 <p style="font-size:28px;font-weight:bold;letter-spacing:6px">${code}</p>
-<p>Ele expira em 10 minutos.</p>
-<p style="color:#666">Se você não solicitou este código, ignore este email.</p>`,
+<p>${mail.expires(minutes)}</p>
+<p style="color:#666">${mail.ignore}</p>`,
     });
   }
 

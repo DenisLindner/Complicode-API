@@ -23,6 +23,7 @@ import {
   type User,
   VerificationChannel,
 } from '../generated/prisma/client';
+import { localeFromLanguageCode } from '../i18n/locale';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TelegramService } from '../telegram/telegram.service';
@@ -69,7 +70,12 @@ export class VerificationService {
     });
 
     try {
-      await this.mail.sendVerificationCode(user.email, user.name, code);
+      await this.mail.sendVerificationCode(
+        user.email,
+        user.name,
+        code,
+        user.locale,
+      );
     } catch (error) {
       await this.prisma.verificationCode.delete({ where: { id: created.id } });
       throw error;
@@ -164,6 +170,35 @@ export class VerificationService {
       where: { id: record.id },
       data: { externalId: telegramId },
     });
+
+    return { locale: record.user.locale };
+  }
+
+  /**
+   * Language of the bot replies: the one chosen on the website by the account
+   * linked to this Telegram user, or the language of their Telegram app.
+   */
+  async resolveTelegramLocale(telegramId: string, languageCode?: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { telegramId },
+      select: { locale: true },
+    });
+    if (user) {
+      return user.locale;
+    }
+
+    const pending = await this.prisma.verificationCode.findFirst({
+      where: {
+        externalId: telegramId,
+        channel: VerificationChannel.PHONE,
+        consumedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { user: { select: { locale: true } } },
+    });
+
+    return pending?.user.locale ?? localeFromLanguageCode(languageCode);
   }
 
   /** Step 2 in the bot: the shared contact proves the phone number. */

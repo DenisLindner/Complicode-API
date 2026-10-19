@@ -7,13 +7,14 @@ import {
   ChallengeLevel,
   ChallengeStatus,
   CreditTransactionType,
+  Locale,
   type User,
 } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChallengeService } from './challenge.service';
 
 describe('ChallengeService', () => {
-  const user = { id: 'user-1' } as User;
+  const user = { id: 'user-1', locale: Locale.pt } as User;
   const stack = { id: 'stack-1', name: 'Backend' };
   const framework = { id: 'fw-1', name: 'NestJS', language: 'TypeScript' };
 
@@ -101,6 +102,28 @@ describe('ChallengeService', () => {
       });
     });
 
+    it('writes the challenge in the language of the user by default', async () => {
+      await service.generate(user, dto);
+
+      expect(prisma.challenge.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ locale: Locale.pt }),
+      });
+      expect(gemini.generateChallenge).toHaveBeenCalledWith(
+        expect.objectContaining({ locale: Locale.pt }),
+      );
+    });
+
+    it('uses the language asked for', async () => {
+      await service.generate(user, { ...dto, locale: Locale.es });
+
+      expect(prisma.challenge.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ locale: Locale.es }),
+      });
+      expect(gemini.generateChallenge).toHaveBeenCalledWith(
+        expect.objectContaining({ locale: Locale.es }),
+      );
+    });
+
     it('removes the challenge and refunds the credit when it fails', async () => {
       gemini.generateChallenge.mockRejectedValue(
         new ServiceUnavailableException(),
@@ -128,6 +151,7 @@ describe('ChallengeService', () => {
       id: 'ch-1',
       frameworkId: framework.id,
       level: ChallengeLevel.MID,
+      locale: Locale.es,
       status: ChallengeStatus.READY,
       regenerationsUsed: 0,
       stack,
@@ -140,6 +164,10 @@ describe('ChallengeService', () => {
       await service.regenerate(user, 'ch-1');
 
       expect(credit.debit).not.toHaveBeenCalled();
+      // Regenerating keeps the language of the challenge, not the user's.
+      expect(gemini.generateChallenge).toHaveBeenCalledWith(
+        expect.objectContaining({ locale: Locale.es }),
+      );
       expect(prisma.challengeVersion.create).toHaveBeenCalledWith({
         data: {
           challengeId: 'ch-1',

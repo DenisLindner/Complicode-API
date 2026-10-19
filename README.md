@@ -12,6 +12,19 @@ Construído com NestJS 12, Prisma 7 (PostgreSQL), Keycloak, Gemini e AbacatePay.
 - O usuário pode comprar **10 créditos por R$ 10,00** pelo checkout da AbacatePay (PIX ou cartão).
 - Os desafios podem ser marcados como públicos e aparecem na galeria pública.
 - Níveis disponíveis: Estagiário, Júnior, Pleno e Sênior.
+- O sistema é multilíngue (**inglês**, **português** e **espanhol**): veja [Idiomas](#idiomas).
+
+## Idiomas
+
+Os idiomas são `en` (base), `pt` e `es`, o enum `Locale` do Prisma.
+
+- **Usuário:** o campo `locale` define o idioma dos e-mails e das mensagens do bot do Telegram. Começa no idioma do cadastro (`locale` em `POST /auth/register`) e o site o atualiza ao entrar e ao trocar de idioma (`PATCH /users/me/locale`). Sem informar, o padrão é `en`.
+- **Desafio:** o campo `locale` é o idioma em que o documento foi escrito. `POST /challenges/generate` aceita um `locale` opcional (o padrão é o do usuário), e regerar mantém o idioma do desafio. O markdown (`GET /challenges/:id/markdown`) usa os títulos das seções nesse idioma.
+- **Gemini:** os prompts são escritos em inglês (`src/ai/prompts`) e pedem ao modelo que escreva todo o desafio no idioma pedido, então um idioma novo não exige novos prompts.
+- **Bot do Telegram:** responde no idioma do usuário vinculado; antes do vínculo, usa o idioma do app do Telegram (`language_code`).
+- **Dados anteriores:** a migration `locale` marca os usuários e desafios que já existiam como `pt`, o idioma em que foram criados.
+
+Os textos ficam em `src/mail/mail.messages.ts`, `src/verification/telegram/telegram-bot.messages.ts` e `src/challenge/challenge.markdown.ts`. Para adicionar um idioma: acrescente o valor ao enum `Locale` (`prisma/schema.prisma`), crie a migration e preencha cada um desses dicionários, além de `LEVEL_LABELS` (`src/catalog/catalog.constants.ts`) e `LANGUAGE_NAMES` (`src/i18n/locale.ts`). O TypeScript aponta o que faltar.
 
 ## Arquitetura
 
@@ -152,11 +165,12 @@ Todas as rotas têm o prefixo `/api`, exigem `X-Internal-Key` (exceto os webhook
 
 | Método | Rota | Descrição |
 | - | - | - |
-| POST | `/auth/register` | Cadastro (público), retorna os tokens |
+| POST | `/auth/register` | Cadastro (público), retorna os tokens (`locale` opcional) |
 | POST | `/auth/login` | Login (público) |
 | POST | `/auth/refresh` | Novo par de tokens a partir do refresh token (público) |
 | POST | `/auth/logout` | Encerra a sessão do refresh token (público) |
 | GET | `/users/me` | Dados do usuário logado |
+| PATCH | `/users/me/locale` | Idioma do usuário (`{ "locale": "es" }`) |
 | GET | `/verification` | Status da verificação e créditos |
 | POST | `/verification/email/send` | Envia o código por email |
 | POST | `/verification/email/confirm` | Confirma o código do email |
@@ -165,7 +179,7 @@ Todas as rotas têm o prefixo `/api`, exigem `X-Internal-Key` (exceto os webhook
 | GET | `/credits/transactions` | Extrato paginado (`?page=&limit=`) |
 | GET | `/catalog/stacks` | Stacks com seus frameworks (público) |
 | GET | `/catalog/levels` | Níveis (público) |
-| POST | `/challenges/generate` | Gera um desafio (`{ stackId, frameworkId, level }`, consome 1 crédito) |
+| POST | `/challenges/generate` | Gera um desafio (`{ stackId, frameworkId, level, locale? }`, consome 1 crédito) |
 | POST | `/challenges/:id/regenerate` | Regera o desafio (1 vez, grátis) |
 | GET | `/challenges` | Meus desafios (paginado) |
 | GET | `/challenges/public` | Galeria pública (público) |

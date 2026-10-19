@@ -25,6 +25,7 @@ export class AuthService {
         keycloakId,
         name: dto.name,
         email: dto.email,
+        locale: dto.locale,
       });
     } catch (error) {
       await this.keycloak.deleteUser(keycloakId);
