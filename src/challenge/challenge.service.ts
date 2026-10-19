@@ -43,7 +43,8 @@ export class ChallengeService implements OnApplicationBootstrap {
 
   /**
    * Recovers challenges left in GENERATING by a crash or restart: new
-   * challenges fail with a refund, regenerations go back to the last version.
+   * challenges are removed with a refund, regenerations go back to the last
+   * version.
    */
   async onApplicationBootstrap() {
     const stuck = await this.prisma.challenge.findMany({
@@ -246,12 +247,13 @@ export class ChallengeService implements OnApplicationBootstrap {
     return challenge;
   }
 
+  /**
+   * A first generation that fails leaves nothing to show, so the challenge is
+   * removed and the credit refunded. The caller already got the error.
+   */
   private async failGeneration(challengeId: string, userId: string) {
     await this.prisma.$transaction(async (tx) => {
-      await tx.challenge.update({
-        where: { id: challengeId },
-        data: { status: ChallengeStatus.FAILED },
-      });
+      await tx.challenge.delete({ where: { id: challengeId } });
       await this.credit.grant(tx, {
         userId,
         amount: GENERATION_COST,

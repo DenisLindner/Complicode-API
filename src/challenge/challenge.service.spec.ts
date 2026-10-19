@@ -37,6 +37,7 @@ describe('ChallengeService', () => {
         create: jest.fn().mockResolvedValue({ id: 'ch-1' }),
         update: jest.fn().mockResolvedValue({ id: 'ch-1' }),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        delete: jest.fn(),
         findFirst: jest.fn(),
         findMany: jest.fn().mockResolvedValue([
           { title: 'Sistema de Reservas', projectName: 'DeskFlow' },
@@ -100,7 +101,7 @@ describe('ChallengeService', () => {
       });
     });
 
-    it('marks the challenge as failed and refunds the credit', async () => {
+    it('removes the challenge and refunds the credit when it fails', async () => {
       gemini.generateChallenge.mockRejectedValue(
         new ServiceUnavailableException(),
       );
@@ -108,10 +109,10 @@ describe('ChallengeService', () => {
       await expect(service.generate(user, dto)).rejects.toThrow(
         ServiceUnavailableException,
       );
-      expect(prisma.challenge.update).toHaveBeenCalledWith({
+      expect(prisma.challenge.delete).toHaveBeenCalledWith({
         where: { id: 'ch-1' },
-        data: { status: ChallengeStatus.FAILED },
       });
+      expect(prisma.challenge.update).not.toHaveBeenCalled();
       expect(credit.grant).toHaveBeenCalledWith(prisma, {
         userId: user.id,
         amount: 1,
